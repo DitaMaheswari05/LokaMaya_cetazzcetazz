@@ -1,4 +1,5 @@
 services:
+  # ─── Frontend ──────────────────────────────────────────────────────────────
   web:
     build:
       context: ./apps/web
@@ -13,52 +14,93 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ─── Backend — Go REST API ─────────────────────────────────────────────────
   api:
     build:
-      context: ./apps/api
+      context: ./apps/api-go
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8080:8080"
     environment:
+      - GO_API_PORT=8080
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
-      - OSRM_URL=${OSRM_URL}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL}
-      - MCP_SERVER_URL=${MCP_SERVER_URL}
+      - OSRM_URL=http://osrm:5000
+      - AI_SERVICE_URL=http://ai-service:8001
+      - LITELLM_URL=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_API_KEY}
+      - NEXT_PUBLIC_MAPID_API_KEY=${NEXT_PUBLIC_MAPID_API_KEY}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      osrm:
+      ai-service:
+        condition: service_healthy
+      litellm:
         condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 5s
     restart: unless-stopped
 
+  # ─── AI Microservice — Python (IndoBERT + BGE-M3) ─────────────────────────
+  ai-service:
+    build:
+      context: ./apps/ai-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-BAAI/bge-m3}
+      - EMBEDDING_DEVICE=cpu
+      - CLASSIFICATION_MODEL=indobenchmark/indobert-base-p1
+      - CLASSIFICATION_DEVICE=cpu
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s  # model loading butuh waktu lebih lama
+    restart: unless-stopped
+
+  # ─── LiteLLM Proxy — AI Router (OpenAI-compatible) ────────────────────────
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    ports:
+      - "4000:4000"
+    environment:
+      - LITELLM_MASTER_KEY=${LITELLM_API_KEY}
+      - GOOGLE_AI_STUDIO_API_KEY=${GOOGLE_AI_STUDIO_API_KEY}
+    # Konfigurasi model via file (opsional; bisa juga via env saja)
+    # volumes:
+    #   - ./infrastructure/litellm/config.yaml:/app/config.yaml
+    # command: ["--config", "/app/config.yaml"]
+    restart: unless-stopped
+
+  # ─── Database — PostgreSQL + PostGIS + pgvector ───────────────────────────
   postgres:
-    image: postgis/postgis:16-3.4
+    image: pgvector/pgvector:pg16
     ports:
       - "5432:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-lokamaya}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-app}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-lokamaya}"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
+  # ─── Cache — Redis ────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     ports:
@@ -73,6 +115,7 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # ─── Routing Engine — OSRM ───────────────────────────────────────────────
   osrm:
     image: ghcr.io/project-osrm/osrm-backend:latest
     ports:
