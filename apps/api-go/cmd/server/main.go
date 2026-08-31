@@ -16,23 +16,22 @@ import (
 	"lokamaya/api-go/internal/config"
 	"lokamaya/api-go/internal/database"
 	"lokamaya/api-go/internal/handler"
+	"lokamaya/api-go/internal/repository"
 	"lokamaya/api-go/internal/router"
+	"lokamaya/api-go/internal/service"
 )
 
 func main() {
-	// ─── Logger ──────────────────────────────────────────────────────────────
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
-	// ─── Config ──────────────────────────────────────────────────────────────
+	// config.Load() akan fatal jika JWT_SECRET tidak dikonfigurasi dengan benar
 	cfg := config.Load()
 	log.Info().Str("port", cfg.Port).Msg("memulai LokaMaya Go API")
 
-	// ─── Context untuk graceful shutdown ─────────────────────────────────────
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// ─── Database — PostgreSQL ────────────────────────────────────────────────
 	db, err := database.NewPostgresPool(ctx, cfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("gagal connect ke PostgreSQL")
@@ -40,7 +39,7 @@ func main() {
 	defer db.Close()
 	log.Info().Msg("PostgreSQL terhubung")
 
-	// ─── Database — Redis ─────────────────────────────────────────────────────
+	// ─── Database — Redis
 	redisClient, err := database.NewRedisClient(cfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("gagal connect ke Redis")
@@ -48,25 +47,29 @@ func main() {
 	defer redisClient.Close()
 	log.Info().Msg("Redis terhubung")
 
-	// ─── Clients (HTTP clients ke service eksternal) ───────────────────────
+	// ─── Clients (HTTP clients ke service eksternal)
 	_ = client.NewOSRMClient(cfg.OSRMURL)
 	_ = client.NewAIClient(cfg.AIServiceURL)
 	_ = client.NewLiteLLMClient(cfg.LiteLLMURL, cfg.LiteLLMAPIKey)
 	// TODO: inject clients ke service saat implementasi
 
-	// ─── Handlers ─────────────────────────────────────────────────────────────
+	// ─── Repositories
+	userRepo := repository.NewUserRepository(db)
+
+	// ─── Services
+	authSvc := service.NewAuthService(userRepo, redisClient, cfg)
+
+	// ─── Handlers
 	healthH := handler.NewHealthHandler()
 	mapH := handler.NewMapHandler()
 	analysisH := handler.NewAnalysisHandler()
 	routingH := handler.NewRoutingHandler()
 	regulationsH := handler.NewRegulationsHandler()
 	communityH := handler.NewCommunityHandler()
-	// TODO: inject service ke handler saat implementasi
+	authH := handler.NewAuthHandler(authSvc)
 
-	// ─── Router ───────────────────────────────────────────────────────────────
-	r := router.New(healthH, mapH, analysisH, routingH, regulationsH, communityH)
+	r := router.New(healthH, mapH, analysisH, routingH, regulationsH, communityH, authH, authSvc)
 
-	// ─── HTTP Server ──────────────────────────────────────────────────────────
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.Port),
 		Handler:      r,
@@ -83,7 +86,6 @@ func main() {
 		}
 	}()
 
-	// ─── Graceful Shutdown ────────────────────────────────────────────────────
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

@@ -1,11 +1,82 @@
+"use client";
+
 import Image from 'next/image';
 import Link from 'next/link';
-import { EyeOff, Mail, Lock, User } from 'lucide-react'; // we have lucide-react in package.json
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { EyeOff, Eye, Mail, Lock, User, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(''); // Clear error when typing
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Basic validation
+    if (!formData.username || !formData.email || !formData.password) {
+      setError('Semua field harus diisi');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('Konfirmasi password tidak cocok');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      const response = await fetch(`${apiUrl}/api/v1/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // PENTING: Kirim dan terima HttpOnly cookie
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Terjadi kesalahan saat mendaftar');
+      }
+
+      // Token sekarang disimpan otomatis di HttpOnly cookie oleh backend.
+      // Kita tidak perlu menyimpannya di localStorage lagi.
+
+      // Redirect ke halaman login atau beranda
+      router.push('/login?registered=true');
+      
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex w-full min-h-screen bg-background">
-      {/* Left side with Image - Hidden on mobile, visible on laptop (lg) */}
+      {/* Left side with Image */}
       <div className="hidden lg:block lg:w-1/2 relative bg-primary">
         <Image 
           src="/login.png" 
@@ -14,7 +85,6 @@ export default function RegisterPage() {
           className="object-cover"
           priority
         />
-        {/* Optional overlay gradient if needed, though image might already have it */}
       </div>
 
       {/* Right side with Form */}
@@ -23,7 +93,6 @@ export default function RegisterPage() {
           
           {/* Header */}
           <div className="flex flex-col items-center text-center gap-2">
-            {/* Logo */}
             <div className="flex items-center gap-2 mb-2">
               <Image 
                 src="/lokamaya_logo.png" 
@@ -44,8 +113,16 @@ export default function RegisterPage() {
           </div>
 
           {/* Form */}
-          <form className="flex flex-col gap-6">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             
+            {/* Error Message */}
+            {error && (
+              <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <p>{error}</p>
+              </div>
+            )}
+
             {/* Username Field */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[12px] font-semibold text-[#4B4B6F]">
@@ -55,8 +132,12 @@ export default function RegisterPage() {
                 <User className="w-4 h-4 text-[#C7C7DF]" />
                 <input 
                   type="text" 
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
                   placeholder="johndoe"
                   className="w-full text-[13px] text-text-dark placeholder:text-[#1A1832]/50 bg-transparent outline-none"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -70,8 +151,12 @@ export default function RegisterPage() {
                 <Mail className="w-4 h-4 text-[#C7C7DF]" />
                 <input 
                   type="email" 
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
                   placeholder="nama@example.com"
                   className="w-full text-[13px] text-text-dark placeholder:text-[#1A1832]/50 bg-transparent outline-none"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -84,12 +169,20 @@ export default function RegisterPage() {
               <div className="flex items-center gap-2.5 px-[14px] py-[12px] bg-white border border-border-light rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
                 <Lock className="w-4 h-4 text-[#C7C7DF]" />
                 <input 
-                  type="password" 
+                  type={showPassword ? "text" : "password"} 
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
                   placeholder="••••••••"
                   className="w-full text-[13px] text-text-dark placeholder:text-[#1A1832]/50 bg-transparent outline-none"
+                  disabled={isLoading}
                 />
-                <button type="button" className="text-[#C7C7DF] hover:text-text-gray transition-colors">
-                  <EyeOff className="w-4 h-4" />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-[#C7C7DF] hover:text-text-gray transition-colors"
+                >
+                  {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -102,12 +195,20 @@ export default function RegisterPage() {
               <div className="flex items-center gap-2.5 px-[14px] py-[12px] bg-white border border-border-light rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
                 <Lock className="w-4 h-4 text-[#C7C7DF]" />
                 <input 
-                  type="password" 
+                  type={showConfirmPassword ? "text" : "password"} 
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
                   placeholder="••••••••"
                   className="w-full text-[13px] text-text-dark placeholder:text-[#1A1832]/50 bg-transparent outline-none"
+                  disabled={isLoading}
                 />
-                <button type="button" className="text-[#C7C7DF] hover:text-text-gray transition-colors">
-                  <EyeOff className="w-4 h-4" />
+                <button 
+                  type="button" 
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="text-[#C7C7DF] hover:text-text-gray transition-colors"
+                >
+                  {showConfirmPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -115,9 +216,17 @@ export default function RegisterPage() {
             {/* Submit Button */}
             <button 
               type="submit" 
-              className="w-full py-[13px] bg-primary text-white text-[14px] font-semibold rounded-xl shadow-[0px_4px_20px_rgba(45,42,112,0.25)] hover:bg-primary/90 transition-colors"
+              disabled={isLoading}
+              className="w-full mt-2 py-[13px] flex items-center justify-center gap-2 bg-primary text-white text-[14px] font-semibold rounded-xl shadow-[0px_4px_20px_rgba(45,42,112,0.25)] hover:bg-primary/90 transition-colors disabled:opacity-70"
             >
-              Daftar
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Mendaftar...
+                </>
+              ) : (
+                'Daftar'
+              )}
             </button>
           </form>
 

@@ -3,7 +3,15 @@
 -- Dijalankan otomatis oleh golang-migrate saat pertama kali setup
 
 -- PostGIS: untuk menyimpan dan mengolah data geospasial
-CREATE EXTENSION IF NOT EXISTS postgis;
+-- Dibuat optional agar tidak blocking jika image tidak punya PostGIS
+DO $$
+BEGIN
+    CREATE EXTENSION IF NOT EXISTS postgis;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'PostGIS tidak tersedia, dilewati: %', SQLERRM;
+END;
+$$;
 
 -- pgvector: untuk menyimpan dan mencari embedding dokumen regulasi (RAG)
 CREATE EXTENSION IF NOT EXISTS vector;

@@ -1,11 +1,169 @@
+"use client";
+
 import Image from 'next/image';
 import Link from 'next/link';
-import { EyeOff, Mail, Lock } from 'lucide-react'; // we have lucide-react in package.json
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { EyeOff, Eye, Mail, Lock, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+
+function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isRegistered = searchParams.get('registered') === 'true';
+
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(''); // Clear error when typing
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.email || !formData.password) {
+      setError('Email dan password harus diisi');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      const response = await fetch(`${apiUrl}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // PENTING: Kirim dan terima HttpOnly cookie
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Email atau password salah');
+      }
+
+      // Simpan data user ke localStorage (TAPI BUKAN TOKEN JWT-nya)
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+
+      // Redirect ke beranda / dashboard
+      router.push('/');
+      
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      
+      {/* Success Message from Registration */}
+      {isRegistered && !error && (
+        <div className="flex items-center gap-2 p-3 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+          <p>Pendaftaran berhasil! Silakan login.</p>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <p>{error}</p>
+        </div>
+      )}
+
+      {/* Email Field */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-[12px] font-semibold text-[#4B4B6F]">
+          Email
+        </label>
+        <div className="flex items-center gap-2.5 px-[14px] py-[12px] bg-white border border-border-light rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+          <Mail className="w-4 h-4 text-[#C7C7DF]" />
+          <input 
+            type="email" 
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="nama@example.com"
+            className="w-full text-[13px] text-text-dark placeholder:text-[#1A1832]/50 bg-transparent outline-none"
+            disabled={isLoading}
+          />
+        </div>
+      </div>
+
+      {/* Password Field */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-[12px] font-semibold text-[#4B4B6F]">
+          Password
+        </label>
+        <div className="flex items-center gap-2.5 px-[14px] py-[12px] bg-white border border-border-light rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+          <Lock className="w-4 h-4 text-[#C7C7DF]" />
+          <input 
+            type={showPassword ? "text" : "password"} 
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="••••••••"
+            className="w-full text-[13px] text-text-dark placeholder:text-[#1A1832]/50 bg-transparent outline-none"
+            disabled={isLoading}
+          />
+          <button 
+            type="button" 
+            onClick={() => setShowPassword(!showPassword)}
+            className="text-[#C7C7DF] hover:text-text-gray transition-colors"
+          >
+            {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Forgot Password */}
+      <div className="flex justify-end">
+        <Link href="#" className="text-[12px] font-medium text-primary hover:underline">
+          Lupa password?
+        </Link>
+      </div>
+
+      {/* Submit Button */}
+      <button 
+        type="submit" 
+        disabled={isLoading}
+        className="w-full mt-2 py-[13px] flex items-center justify-center gap-2 bg-primary text-white text-[14px] font-semibold rounded-xl shadow-[0px_4px_20px_rgba(45,42,112,0.25)] hover:bg-primary/90 transition-colors disabled:opacity-70"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Memproses...
+          </>
+        ) : (
+          'Masuk'
+        )}
+      </button>
+    </form>
+  );
+}
 
 export default function LoginPage() {
   return (
     <div className="flex w-full min-h-screen bg-background">
-      {/* Left side with Image - Hidden on mobile, visible on laptop (lg) */}
+      {/* Left side with Image */}
       <div className="hidden lg:block lg:w-1/2 relative bg-primary">
         <Image 
           src="/login.png" 
@@ -14,7 +172,6 @@ export default function LoginPage() {
           className="object-cover"
           priority
         />
-        {/* Optional overlay gradient if needed, though image might already have it */}
       </div>
 
       {/* Right side with Form */}
@@ -23,7 +180,6 @@ export default function LoginPage() {
           
           {/* Header */}
           <div className="flex flex-col items-center text-center gap-2">
-            {/* Logo */}
             <div className="flex items-center gap-2 mb-2">
               <Image 
                 src="/lokamaya_logo.png" 
@@ -43,60 +199,13 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Form */}
-          <form className="flex flex-col gap-6">
-            
-            {/* Email Field */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[12px] font-semibold text-[#4B4B6F]">
-                Email
-              </label>
-              <div className="flex items-center gap-2.5 px-[14px] py-[12px] bg-white border border-border-light rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
-                <Mail className="w-4 h-4 text-[#C7C7DF]" />
-                <input 
-                  type="email" 
-                  placeholder="nama@example.com"
-                  className="w-full text-[13px] text-text-dark placeholder:text-[#1A1832]/50 bg-transparent outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Password Field */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[12px] font-semibold text-[#4B4B6F]">
-                Password
-              </label>
-              <div className="flex items-center gap-2.5 px-[14px] py-[12px] bg-white border border-border-light rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
-                <Lock className="w-4 h-4 text-[#C7C7DF]" />
-                <input 
-                  type="password" 
-                  placeholder="••••••••"
-                  className="w-full text-[13px] text-text-dark placeholder:text-[#1A1832]/50 bg-transparent outline-none"
-                />
-                <button type="button" className="text-[#C7C7DF] hover:text-text-gray transition-colors">
-                  <EyeOff className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Forgot Password */}
-            <div className="flex justify-end">
-              <Link href="#" className="text-[12px] font-medium text-primary hover:underline">
-                Lupa password?
-              </Link>
-            </div>
-
-            {/* Submit Button */}
-            <button 
-              type="submit" 
-              className="w-full py-[13px] bg-primary text-white text-[14px] font-semibold rounded-xl shadow-[0px_4px_20px_rgba(45,42,112,0.25)] hover:bg-primary/90 transition-colors"
-            >
-              Masuk
-            </button>
-          </form>
+          {/* Form with Suspense for useSearchParams */}
+          <Suspense fallback={<div className="flex justify-center p-4"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
+            <LoginForm />
+          </Suspense>
 
           {/* Divider */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mt-2">
             <div className="h-[1px] flex-1 bg-border-light"></div>
             <span className="text-[11px] text-[#9999BF]">atau masuk dengan</span>
             <div className="h-[1px] flex-1 bg-border-light"></div>

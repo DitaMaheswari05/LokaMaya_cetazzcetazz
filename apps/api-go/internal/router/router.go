@@ -3,10 +3,12 @@ package router
 import (
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"lokamaya/api-go/internal/handler"
 	"lokamaya/api-go/internal/middleware"
+	"lokamaya/api-go/internal/service"
+
+	"github.com/go-chi/chi/v5"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 )
 
 // New membuat dan mengembalikan chi Router dengan semua route terdaftar.
@@ -18,20 +20,27 @@ func New(
 	routingH *handler.RoutingHandler,
 	regulationsH *handler.RegulationsHandler,
 	communityH *handler.CommunityHandler,
+	authH *handler.AuthHandler,
+	authSvc service.AuthService,
 ) http.Handler {
 	r := chi.NewRouter()
 
-	// ─── Global Middleware ───────────────────────────────────────────────────
-	r.Use(chimiddleware.Recoverer)   // recover dari panic
-	r.Use(middleware.RequestLogger)  // log setiap request
-	r.Use(middleware.CORS)           // CORS headers
+	r.Use(chimiddleware.Recoverer)  // recover dari panic
+	r.Use(middleware.RequestLogger) // log setiap request
+	r.Use(middleware.CORS)          // CORS headers
 
-	// ─── Health & Readiness ──────────────────────────────────────────────────
 	r.Get("/health", healthH.Health)
 	r.Get("/readyz", healthH.Ready)
 
-	// ─── API v1 ──────────────────────────────────────────────────────────────
 	r.Route("/api/v1", func(r chi.Router) {
+
+		// Auth — public routes (tidak butuh JWT)
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/register", authH.Register)
+			r.Post("/login", authH.Login)
+			// Logout butuh JWT yang valid
+			r.With(middleware.RequireAuth(authSvc)).Post("/logout", authH.Logout)
+		})
 
 		// Map — layer dan fitur spasial
 		r.Route("/map", func(r chi.Router) {
