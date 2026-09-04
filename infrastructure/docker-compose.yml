@@ -1,0 +1,86 @@
+version: "3.8"
+
+services:
+  # ----------------------------------------------------------------------------
+  # PostgreSQL with PostGIS & pgvector
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: postgres-db
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-spatial_ai_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-spatial_ai_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # Redis Cache
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    command: >
+      sh -c 'if [ -z "$${REDIS_PASSWORD}" ]; then
+              redis-server;
+            else
+              redis-server --requirepass "$${REDIS_PASSWORD}";
+            fi'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # LiteLLM Proxy
+  # ----------------------------------------------------------------------------
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: litellm-proxy
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./docker/litellm/config.yml:/app/config.yml
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-litellm-secret-key}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    command: ["--config", "/app/config.yml", "--port", "4000", "--host", "0.0.0.0"]
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ----------------------------------------------------------------------------
+  # OSRM Backend (Routing & Isochrone Engine)
+  # ----------------------------------------------------------------------------
+  osrm:
+    image: osrm/osrm-backend:latest
+    container_name: osrm-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../data/spatial:/data
+    command: osrm-routed --algorithm mld /data/map.osrm
+
+volumes:
+  postgres_data:
+  redis_data:
