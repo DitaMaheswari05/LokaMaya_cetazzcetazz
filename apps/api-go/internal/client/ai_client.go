@@ -1,0 +1,90 @@
+package client
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+)
+
+// AIClient adalah HTTP client untuk berkomunikasi dengan Python ai-service.
+// ai-service expose dua endpoint: /embed (BGE-M3) dan /classify (IndoBERT).
+type AIClient struct {
+	baseURL    string
+	httpClient *http.Client
+}
+
+func NewAIClient(baseURL string) *AIClient {
+	return &AIClient{
+		baseURL: baseURL,
+		httpClient: &http.Client{
+			Timeout: 60 * time.Second, // model inference bisa butuh waktu
+		},
+	}
+}
+
+// EmbedRequest adalah request body ke POST /embed di ai-service.
+type EmbedRequest struct {
+	Texts []string `json:"texts"`
+}
+
+// EmbedResponse adalah respons dari POST /embed.
+type EmbedResponse struct {
+	Embeddings [][]float32 `json:"embeddings"`
+}
+
+// ClassifyRequest adalah request body ke POST /classify di ai-service.
+type ClassifyRequest struct {
+	Text   string   `json:"text"`
+	Labels []string `json:"labels,omitempty"`
+}
+
+// ClassifyResponse adalah respons dari POST /classify.
+type ClassifyResponse struct {
+	Label      string  `json:"label"`
+	Confidence float64 `json:"confidence"`
+}
+
+// Embed memanggil ai-service untuk menghasilkan embedding teks via BGE-M3.
+// TODO: implementasi
+func (c *AIClient) Embed(ctx context.Context, texts []string) (*EmbedResponse, error) {
+	// TODO: implementasi
+	_ = ctx
+	return nil, fmt.Errorf("belum diimplementasi")
+}
+
+// Classify memanggil ai-service untuk klasifikasi teks via IndoBERT.
+// TODO: implementasi
+func (c *AIClient) Classify(ctx context.Context, text string, labels []string) (*ClassifyResponse, error) {
+	// TODO: implementasi
+	_ = ctx
+	return nil, fmt.Errorf("belum diimplementasi")
+}
+
+// postJSON adalah helper HTTP POST dengan JSON body dan response decode.
+func (c *AIClient) postJSON(ctx context.Context, path string, reqBody, respBody interface{}) error {
+	b, err := json.Marshal(reqBody)
+	if err != nil {
+		return fmt.Errorf("marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("ai-service request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("ai-service error: status %d", resp.StatusCode)
+	}
+
+	return json.NewDecoder(resp.Body).Decode(respBody)
+}

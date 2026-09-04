@@ -12,13 +12,33 @@ Platform WebGIS berbasis AI untuk analisis spasial, aksesibilitas, dan pengelola
 | Frontend | React / Next.js | Antarmuka pengguna dan dashboard WebGIS |
 | Pengelolaan Data Spasial | GEO MAPID Editor | Manajemen layer, atribut, publikasi data |
 | Validasi Lapangan | MAPID Apps (Mission) | Survei kandidat lokasi secara geotag |
-| Backend API | FastAPI | REST API, orkestrasi analisis, integrasi MCP |
-| Basis Data | PostgreSQL + PostGIS | Penyimpanan dan analisis data spasial |
+| Backend API | **Go (chi)** | REST API, business logic, spatial query, OSRM client, Redis cache |
+| AI Microservice | **FastAPI + PyTorch** | IndoBERT klasifikasi, BGE-M3 embedding (dipanggil Go via HTTP) |
+| AI Orchestration | **LiteLLM** | Router OpenAI-compatible → Google AI Studio / provider lain |
+| Basis Data | PostgreSQL + PostGIS | Penyimpanan dan analisis data geospasial |
 | RAG & Vector Store | BGE-M3 + pgvector | Pencarian semantik dokumen regulasi |
 | NLP | IndoBERT | Klasifikasi Community Maps |
 | Routing & Isochrone | OSRM | Analisis aksesibilitas berbasis jaringan jalan |
-| AI Orchestration | Gemini Flash via MCP | Function calling dan penyusunan narasi |
 | Cache | Redis | Penyimpanan hasil query yang sering digunakan |
+| Database Migration | golang-migrate | Plain SQL migration files |
+
+---
+
+## Arsitektur Service
+
+```
+Browser → Next.js (3000)
+              ↓
+         Go API (8080)
+        /    |    \    \
+   Postgres Redis OSRM  ai-service (8001)
+   +PostGIS        (5000)  ↓
+   +pgvector           IndoBERT + BGE-M3
+              ↓
+         LiteLLM (4000)
+              ↓
+         Google AI Studio / Provider lain
+```
 
 ---
 
@@ -29,7 +49,7 @@ Pastikan semua tools berikut sudah terinstall sebelum memulai:
 | Tool | Versi Minimum | Keterangan |
 |---|---|---|
 | [Node.js](https://nodejs.org) | 20.x LTS | Untuk menjalankan Next.js frontend |
-| [Python](https://python.org) | 3.12 | Untuk menjalankan FastAPI backend |
+| [Go](https://go.dev) | 1.23 | Untuk menjalankan Go backend |
 | [Docker](https://docker.com) | 24.x | Untuk menjalankan semua service via container |
 | [Docker Compose](https://docs.docker.com/compose/) | 2.x | Sudah include di Docker Desktop |
 | [Git](https://git-scm.com) | — | Version control |
@@ -43,83 +63,59 @@ project-root/
 │
 ├── apps/
 │   ├── web/                         # Next.js Frontend
-│   │   ├── public/                  # Static assets (gambar, font, dll)
-│   │   ├── src/
-│   │   │   ├── app/                 # Next.js App Router (halaman & layout)
-│   │   │   │   ├── dashboard/       # Halaman dashboard utama
-│   │   │   │   ├── map/             # Halaman visualisasi peta
-│   │   │   │   ├── analysis/        # Halaman analisis spasial
-│   │   │   │   └── api/             # Route handler Next.js (API internal)
-│   │   │   ├── components/          # Komponen React yang reusable
-│   │   │   │   ├── map/             # Komponen terkait peta (MAPID SDK)
-│   │   │   │   ├── dashboard/       # Komponen chart dan statistik
-│   │   │   │   ├── analysis/        # Komponen panel analisis
-│   │   │   │   └── ui/              # Komponen UI generik (button, modal, dll)
-│   │   │   ├── lib/                 # Logika & integrasi eksternal
-│   │   │   │   ├── mapid/           # MAPID Maps SDK client & layer config
-│   │   │   │   ├── api/             # HTTP client ke FastAPI backend
-│   │   │   │   └── utils/           # Helper functions
-│   │   │   ├── hooks/               # Custom React hooks
-│   │   │   ├── types/               # TypeScript type definitions
-│   │   │   └── styles/              # Global styles & CSS modules
-│   │   ├── next.config.ts
-│   │   ├── package.json
-│   │   └── tsconfig.json
+│   │   ├── public/
+│   │   └── src/
+│   │       ├── app/                 # Next.js App Router
+│   │       ├── components/          # Komponen React
+│   │       ├── lib/                 # Integrasi MAPID SDK & API client
+│   │       ├── hooks/
+│   │       ├── types/
+│   │       └── styles/
 │   │
-│   └── api/                         # FastAPI Backend
+│   ├── api-go/                      # Go Backend (REST API Utama)
+│   │   ├── cmd/
+│   │   │   └── server/
+│   │   │       └── main.go          # Entry point
+│   │   ├── internal/
+│   │   │   ├── config/              # Konfigurasi dari env variable
+│   │   │   ├── database/            # Koneksi PostgreSQL (pgx) & Redis
+│   │   │   ├── middleware/          # CORS, request logger
+│   │   │   ├── router/              # Registrasi semua route (chi)
+│   │   │   ├── handler/             # HTTP handler per domain
+│   │   │   ├── service/             # Business logic per domain
+│   │   │   ├── repository/          # Query database (pgx + sqlc)
+│   │   │   ├── client/              # HTTP client ke OSRM, ai-service, LiteLLM
+│   │   │   └── model/               # Struct data (GeoJSON, Regulation, Community)
+│   │   ├── go.mod
+│   │   └── Dockerfile
+│   │
+│   └── ai-service/                  # Python AI Microservice
 │       ├── app/
-│       │   ├── main.py              # Entry point FastAPI, registrasi router
-│       │   ├── api/
-│       │   │   ├── routes/          # Endpoint per domain (map, analysis, dll)
-│       │   │   └── dependencies.py  # Dependency injection (DB session, auth, dll)
-│       │   ├── core/
-│       │   │   ├── config.py        # Konfigurasi dari environment variable
-│       │   │   ├── database.py      # Koneksi async PostgreSQL (asyncpg/SQLAlchemy)
-│       │   │   └── cache.py         # Koneksi Redis
-│       │   ├── models/              # SQLAlchemy ORM models (tabel database)
-│       │   ├── schemas/             # Pydantic schemas (request/response validation)
-│       │   ├── services/            # Business logic per domain
-│       │   ├── routing/
-│       │   │   └── osrm_client.py   # HTTP client ke OSRM (routing & isochrone)
-│       │   ├── rag/
-│       │   │   ├── embeddings.py    # BGE-M3 embedding generation
-│       │   │   ├── retriever.py     # Semantic search via pgvector
-│       │   │   ├── vector_store.py  # Manajemen vector store di PostgreSQL
-│       │   │   └── documents/       # Dokumen regulasi tata ruang (PDF, txt, dll)
-│       │   ├── nlp/
-│       │   │   └── indo_bert.py     # IndoBERT untuk klasifikasi Community Maps
-│       │   ├── mcp/
-│       │   │   ├── client.py        # MCP client untuk Gemini Flash
-│       │   │   └── tools/           # Definisi MCP tools (function calling)
-│       │   └── cache/
-│       │       └── redis_client.py  # Redis client wrapper
+│       │   ├── main.py              # Entry point FastAPI
+│       │   ├── api/routes/          # /embed (BGE-M3) dan /classify (IndoBERT)
+│       │   ├── core/                # Settings
+│       │   └── ml/                  # Model loader singleton
 │       ├── requirements.txt
 │       └── Dockerfile
 │
 ├── packages/
 │   └── shared/
-│       ├── types/                   # Type definitions yang dipakai FE & BE
+│       ├── types/                   # Type definitions bersama FE & BE
 │       └── constants/               # Konstanta bersama (kode wilayah, dll)
 │
 ├── infrastructure/
 │   ├── docker/
-│   │   ├── postgres/
-│   │   │   └── init.sql             # Inisialisasi ekstensi PostGIS & pgvector
-│   │   ├── osrm/                    # Konfigurasi OSRM (data peta, preprocessing)
-│   │   └── redis/                   # Konfigurasi Redis (jika butuh custom)
-│   ├── migrations/                  # Alembic database migrations
-│   └── docker-compose.yml           # Docker Compose khusus untuk infrastruktur saja
-│
+│   │   └── postgres/
+│   │       └── init.sql             # Inisialisasi PostGIS & pgvector extensions
+│   ├── migrations/                  # golang-migrate SQL files
+│   │   ├── 000001_init_extensions.up.sql
+│   │   └── 000001_init_extensions.down.sql
+│   └── docker-compose.yml           # Docker Compose khusus infrastruktur saja
 ├── data/
 │   ├── regulations/                 # Dokumen regulasi tata ruang (input RAG)
 │   └── spatial/                     # Data spasial & file OSRM (.osrm, .osm.pbf)
-│
 ├── docs/
-│   ├── architecture/                # Diagram arsitektur sistem
-│   ├── api/                         # Dokumentasi API endpoint
-│   └── database/                    # Skema & ERD database
-│
-├── .env.example                     # Template environment variable
+├── .env.template                    # Template environment variable
 ├── .gitignore
 ├── README.md
 └── docker-compose.yml               # Docker Compose utama (semua service)
@@ -129,145 +125,239 @@ project-root/
 
 ## Cara Menjalankan
 
-### 1. Clone & Setup Environment
+> **Buat yang baru clone:** Ikuti step di bawah ini secara berurutan. Jangan skip step manapun.
+
+---
+
+### Step 1 — Install Prasyarat
+
+Pastikan semua tools berikut sudah terinstall di komputermu:
+
+| Tool | Versi | Link Download | Cek Instalasi |
+|---|---|---|---|
+| Git | terbaru | [git-scm.com](https://git-scm.com) | `git --version` |
+| Docker Desktop | 24.x+ | [docker.com](https://www.docker.com/products/docker-desktop) | `docker --version` |
+| Go | 1.23+ | [go.dev/dl](https://go.dev/dl) | `go version` |
+| Node.js | 20.x LTS | [nodejs.org](https://nodejs.org) | `node --version` |
+
+> **Catatan:** Docker Desktop sudah include Docker Compose, jadi tidak perlu install terpisah.
+> Pastikan Docker Desktop sedang **berjalan** sebelum melanjutkan.
+
+---
+
+### Step 2 — Clone Repository
 
 ```bash
 git clone <repo-url>
 cd LokaMaya
-
-# Salin template env dan isi sesuai kebutuhan
-cp .env.example .env
 ```
 
-Edit file `.env` dan isi semua nilai yang diperlukan (API key, database password, dll).
+---
 
-### 2. Menjalankan dengan Docker (Direkomendasikan)
-
-Cara paling mudah untuk menjalankan semua service sekaligus.
+### Step 3 — Setup Environment Variables
 
 ```bash
-# Build dan jalankan semua service
+# Salin template ke file .env
+cp .env.template .env
+```
+
+Buka file `.env` dengan text editor, lalu isi nilai-nilai berikut:
+
+| Variable | Nilai untuk Development Lokal | Keterangan |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8080` | Sudah diisi di template |
+| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/lokamaya?sslmode=disable` | Sudah diisi di template |
+| `REDIS_URL` | `redis://localhost:6379/0` | Sudah diisi di template |
+| `NEXT_PUBLIC_MAPID_API_KEY` | _(minta ke tim)_ | API Key MAPID |
+| `GOOGLE_AI_STUDIO_API_KEY` | _(minta ke tim)_ | API Key Google AI Studio |
+| `LITELLM_API_KEY` | _(bebas, buat sendiri)_ | Contoh: `sk-lokamaya-dev` |
+
+> **Yang wajib diisi manual:** `NEXT_PUBLIC_MAPID_API_KEY`, `GOOGLE_AI_STUDIO_API_KEY`, dan `LITELLM_API_KEY`.
+> Sisanya sudah ada nilai default yang langsung bisa dipakai.
+
+---
+
+### Step 4 — Siapkan Data OSRM (Routing Pejalan Kaki)
+
+OSRM butuh data peta Indonesia untuk menghitung rute. File ini besar (~500MB) dan tidak ikut di repo.
+
+**4a.** Download data OpenStreetMap Indonesia dari [download.geofabrik.de](https://download.geofabrik.de/asia/indonesia.html)
+→ Pilih file `indonesia-latest.osm.pbf`
+
+**4b.** Letakkan file tersebut di folder:
+```
+data/spatial/indonesia-latest.osm.pbf
+```
+
+**4c.** Jalankan preprocessing OSRM (hanya perlu dilakukan **sekali**):
+
+```bash
+# Ekstrak data peta (butuh beberapa menit)
+docker run -t -v ${PWD}/data/spatial:/data \
+  ghcr.io/project-osrm/osrm-backend \
+  osrm-extract -p /opt/foot.lua /data/indonesia-latest.osm.pbf
+
+# Partition
+docker run -t -v ${PWD}/data/spatial:/data \
+  ghcr.io/project-osrm/osrm-backend \
+  osrm-partition /data/indonesia-latest.osrm
+
+# Customize
+docker run -t -v ${PWD}/data/spatial:/data \
+  ghcr.io/project-osrm/osrm-backend \
+  osrm-customize /data/indonesia-latest.osrm
+```
+
+> **Windows (PowerShell):** Ganti `${PWD}` dengan path absolut folder project, contoh:
+> ```powershell
+> docker run -t -v "C:/Users/nama/LokaMaya/data/spatial:/data" ...
+> ```
+
+> **Skip dulu:** Jika tidak butuh fitur routing sekarang, bisa skip Step 4 ini. Service lain tetap bisa jalan normal.
+
+---
+
+### Step 5 — Build & Jalankan Semua Service
+
+```bash
 docker compose up --build
+```
 
-# Jalankan di background
-docker compose up --build -d
+Proses ini akan memakan waktu **5-15 menit** pertama kali karena Docker perlu:
+- Build image Go API (~2 menit)
+- Build image Python AI service + download PyTorch (~10 menit)
+- Pull image PostgreSQL, Redis, LiteLLM
 
-# Lihat log semua service
+Untuk run berikutnya (tanpa rebuild) cukup:
+```bash
+docker compose up
+```
+
+---
+
+### Step 6 — Verifikasi Semua Service Berjalan
+
+Buka browser atau gunakan terminal, cek satu per satu:
+
+```bash
+# Go API — harus return {"status":"ok","service":"lokamaya-api"}
+curl http://localhost:8080/health
+
+# AI Service — harus return {"status":"ok","service":"lokamaya-ai-service"}
+curl http://localhost:8001/health
+
+# Frontend — buka di browser
+# http://localhost:3000
+```
+
+Atau cek status container semua service:
+```bash
+docker compose ps
+```
+
+Semua service harus berstatus **running** (atau **healthy**):
+
+| Service | Port | Status yang Diharapkan |
+|---|---|---|
+| web (Next.js) | 3000 | running |
+| api (Go) | 8080 | healthy |
+| ai-service (Python) | 8001 | healthy _(butuh ~60 detik untuk load model)_ |
+| litellm | 4000 | running |
+| postgres | 5432 | healthy |
+| redis | 6379 | healthy |
+| osrm | 5000 | running _(jika data sudah dipreprocess)_ |
+
+---
+
+### Step 7 — Jalankan Database Migration
+
+Setelah PostgreSQL berjalan, jalankan migration untuk inisialisasi schema:
+
+```bash
+# Install golang-migrate (hanya perlu sekali)
+go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
+# Jalankan migration
+migrate -path infrastructure/migrations \
+  -database "postgres://postgres:postgres@localhost:5432/lokamaya?sslmode=disable" \
+  up
+```
+
+---
+
+### Perintah Berguna Sehari-hari
+
+```bash
+# Jalankan semua service di background
+docker compose up -d
+
+# Lihat log semua service (real-time)
 docker compose logs -f
+
+# Lihat log service tertentu saja
+docker compose logs -f api
+docker compose logs -f ai-service
+
+# Restart satu service (tanpa rebuild yang lain)
+docker compose restart api
+
+# Rebuild dan restart satu service saja (setelah ada perubahan kode)
+docker compose up --build api
 
 # Hentikan semua service
 docker compose down
 
-# Hentikan dan hapus volume (reset database)
+# Hentikan dan hapus database (reset total)
 docker compose down -v
 ```
 
-Setelah berhasil:
-- **Frontend** → http://localhost:3000
-- **Backend API** → http://localhost:8000
-- **API Docs (Swagger)** → http://localhost:8000/docs
-- **PostgreSQL** → `localhost:5432`
-- **Redis** → `localhost:6379`
-- **OSRM** → http://localhost:5000
-
 ---
 
-### 3. Menjalankan secara Lokal (Development)
+### Troubleshooting
 
-#### Frontend — Next.js
-
+**Port sudah dipakai?**
 ```bash
-cd apps/web
-npm install
-npm run dev
+# Cek proses yang pakai port tertentu (Windows)
+netstat -ano | findstr :8080
+
+# Hentikan container yang mungkin masih jalan
+docker compose down
 ```
 
-Frontend berjalan di http://localhost:3000
+**ai-service terus restart?**
+- Wajar, model loading butuh waktu. Tunggu ~60 detik, lalu cek lagi dengan `docker compose ps`.
+- Jika tetap gagal, cek log: `docker compose logs ai-service`
 
-#### Backend — FastAPI
-
+**`go mod tidy` error saat development lokal?**
 ```bash
-cd apps/api
+# Pastikan Go sudah terinstall dan versinya minimal 1.23
+go version
 
-# Buat virtual environment
-python -m venv .venv
-
-# Aktifkan virtual environment
-# Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Jalankan development server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Download semua dependency
+cd apps/api-go
+go mod tidy
 ```
 
-Backend berjalan di http://localhost:8000
-
-> **Catatan:** Untuk development lokal, pastikan PostgreSQL, Redis, dan OSRM sudah berjalan. Bisa jalankan hanya service infrastruktur via Docker:
-> ```bash
-> docker compose up postgres redis osrm -d
-> ```
-
----
-
-### 4. Setup OSRM (Routing & Isochrone)
-
-OSRM membutuhkan data peta Indonesia yang diproses terlebih dahulu sebelum bisa digunakan.
-
-```bash
-# 1. Download data OpenStreetMap Indonesia
-# Letakkan file .osm.pbf di folder data/spatial/
-
-# 2. Preprocessing data (jalankan sekali)
-docker run -t -v $(pwd)/data/spatial:/data \
-  ghcr.io/project-osrm/osrm-backend \
-  osrm-extract -p /opt/car.lua /data/indonesia.osm.pbf
-
-docker run -t -v $(pwd)/data/spatial:/data \
-  ghcr.io/project-osrm/osrm-backend \
-  osrm-partition /data/indonesia.osrm
-
-docker run -t -v $(pwd)/data/spatial:/data \
-  ghcr.io/project-osrm/osrm-backend \
-  osrm-customize /data/indonesia.osrm
-
-# 3. Setelah preprocessing selesai, uncomment command OSRM di docker-compose.yml
-```
-
----
-
-### 5. Database Migration
-
-```bash
-cd apps/api
-
-# Buat migration baru
-alembic revision --autogenerate -m "nama_migration"
-
-# Jalankan migration
-alembic upgrade head
-
-# Rollback migration
-alembic downgrade -1
-```
+**Database migration gagal?**
+- Pastikan PostgreSQL sudah running (`docker compose ps postgres`)
+- Pastikan `DATABASE_URL` di `.env` sudah benar
 
 ---
 
 ## Environment Variables
 
-Lihat [`.env.example`](.env.example) untuk daftar lengkap environment variable yang dibutuhkan.
+Lihat [`.env.template`](.env.template) untuk daftar lengkap environment variable yang dibutuhkan.
 
 | Variable | Keterangan |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | URL FastAPI backend (dari sisi browser) |
+| `NEXT_PUBLIC_API_URL` | URL Go backend API (dari sisi browser) |
 | `NEXT_PUBLIC_MAPID_API_KEY` | API Key MAPID Maps SDK |
 | `DATABASE_URL` | Koneksi string PostgreSQL |
 | `REDIS_URL` | Koneksi string Redis |
 | `OSRM_URL` | URL service OSRM |
-| `GEMINI_API_KEY` | API Key Google Gemini |
-| `EMBEDDING_MODEL` | Model embedding untuk RAG (default: `BAAI/bge-m3`) |
-| `MCP_SERVER_URL` | URL MCP server |
+| `GO_API_PORT` | Port Go API server (default: 8080) |
+| `AI_SERVICE_URL` | URL Python AI microservice (default: http://ai-service:8001) |
+| `EMBEDDING_MODEL` | Model embedding untuk BGE-M3 (default: `BAAI/bge-m3`) |
+| `LITELLM_URL` | URL LiteLLM proxy (default: http://litellm:4000) |
+| `LITELLM_API_KEY` | API Key untuk autentikasi ke LiteLLM |
+| `GOOGLE_AI_STUDIO_API_KEY` | API Key Google AI Studio (dipakai LiteLLM) |
