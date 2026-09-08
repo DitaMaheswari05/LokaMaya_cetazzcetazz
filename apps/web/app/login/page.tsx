@@ -60,8 +60,8 @@ function LoginForm() {
         localStorage.setItem('user', JSON.stringify(data.user));
       }
 
-      // Redirect ke beranda / dashboard
-      router.push('/');
+      // Redirect ke Peta Simulasi
+      router.push('/peta-simulasi');
       
     } catch (err: any) {
       setError(err.message);
