@@ -1,8 +1,15 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
+import ChatWidget from '@/components/ChatWidget';
 import { Search, Menu, Loader2 } from 'lucide-react';
+
+const MapComponent = dynamic(() => import('@/components/Map'), { 
+  ssr: false,
+  loading: () => <div className="absolute inset-0 w-full h-full bg-[#1E1E3A] animate-pulse z-0" />
+});
 
 const LAYERS = [
   { id: 'transjakarta', name: 'Halte TransJakarta', color: '#2D2A70', defaultActive: true },
@@ -17,6 +24,7 @@ export default function PetaSimulasiPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeLayers, setActiveLayers] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
     LAYERS.forEach(l => init[l.id] = l.defaultActive);
@@ -104,12 +112,9 @@ export default function PetaSimulasiPage() {
         )}
 
         {/* Map Area */}
-        <div className="flex-1 bg-[#1E1E3A] relative flex flex-col w-full h-full overflow-hidden" 
-             style={{
-               backgroundImage: `linear-gradient(180deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)`,
-               backgroundSize: '100px 100px',
-               backgroundPosition: 'center center'
-             }}>
+        <div className="flex-1 relative flex flex-col w-full h-full overflow-hidden">
+          
+          <MapComponent className="absolute inset-0 w-full h-full z-0" styleName="street-v2.0" />
           
           {/* Top Control - Left (Mobile toggle + Buttons) */}
           <div className="absolute top-4 left-4 md:left-6 z-10 flex items-center gap-3">
@@ -157,10 +162,14 @@ export default function PetaSimulasiPage() {
             <span className="text-white/45 text-[12px] leading-[18px] mt-[4px]">atau tanya AI di bawah kanan</span>
           </div>
 
-          {/* Bottom Right AI Button */}
-          <button className="absolute bottom-6 right-6 z-10 w-[48px] h-[48px] bg-[#2D2A70] rounded-[14px] shadow-[0px_4px_16px_rgba(45,42,112,0.35)] flex items-center justify-center hover:scale-105 transition-transform">
+          {/* Bottom Right AI Button & Widget */}
+          <ChatWidget isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+          <button 
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            className="absolute bottom-6 right-4 sm:right-6 z-20 w-[48px] h-[48px] bg-[#2D2A70] rounded-[14px] shadow-[0px_4px_16px_rgba(45,42,112,0.35)] flex items-center justify-center hover:scale-105 transition-transform"
+          >
             <Menu className="w-[20px] h-[20px] text-white" />
-            <div className="absolute -top-[4px] -right-[4px] min-w-[18px] h-[18px] bg-[#ED6B23] rounded-full text-[9px] font-bold text-white flex items-center justify-center px-1 border-[1.8px] border-[#1E1E3A] z-20">
+            <div className="absolute -top-[4px] -right-[4px] min-w-[18px] h-[18px] bg-[#ED6B23] rounded-full text-[9px] font-bold text-white flex items-center justify-center px-1 border-[1.8px] border-[#1E1E3A] z-30">
               AI
             </div>
           </button>
