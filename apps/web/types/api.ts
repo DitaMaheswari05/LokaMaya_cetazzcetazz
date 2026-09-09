@@ -106,3 +106,19 @@ export interface LayerConfig {
   visible: boolean;
   opacity: number;
 }
+
+export interface GeoJSONFeature {
+  type: 'Feature';
+  id?: string | number;
+  properties: Record<string, any>;
+  geometry: {
+    type: string;
+    coordinates: any;
+  };
+}
+
+export interface GeoJSONFeatureCollection {
+  type: 'FeatureCollection';
+  layer?: string;
+  features: GeoJSONFeature[];
+}

@@ -63,9 +63,9 @@ func main() {
 
 	// ─── Handlers
 	healthH := handler.NewHealthHandler()
-	mapH := handler.NewMapHandler()
+	mapH := handler.NewMapHandler(spatialRepo)
 	analysisH := handler.NewAnalysisHandler(analysisSvc)
-	routingH := handler.NewRoutingHandler()
+	routingH := handler.NewRoutingHandler(spatialRepo)
 	regulationsH := handler.NewRegulationsHandler()
 	communityH := handler.NewCommunityHandler()
 	authH := handler.NewAuthHandler(authSvc)

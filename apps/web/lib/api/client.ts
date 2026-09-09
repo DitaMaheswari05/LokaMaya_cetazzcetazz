@@ -70,6 +70,24 @@ class ApiClient {
       method: 'GET',
     });
   }
+
+  /**
+   * Mengambil fitur spasial GeoJSON untuk layer tertentu (halte, rute, rdtr, banjir, umkm, community).
+   */
+  async getLayerFeatures(layerId: string): Promise<any> {
+    return this.request<any>(`/api/v1/map/features?layer=${encodeURIComponent(layerId)}`, {
+      method: 'GET',
+    });
+  }
+
+  /**
+   * Mengambil poligon jangkauan jalan kaki 5 dan 10 menit (isochrone).
+   */
+  async getIsochrone(latitude: number, longitude: number): Promise<any> {
+    return this.request<any>(`/api/v1/routing/isochrone?lat=${latitude}&lng=${longitude}`, {
+      method: 'GET',
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

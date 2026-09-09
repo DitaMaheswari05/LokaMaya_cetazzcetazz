@@ -2,13 +2,17 @@ package handler
 
 import (
 	"net/http"
+
+	"lokamaya/api-go/internal/repository"
 )
 
 // MapHandler menangani semua request terkait layer dan metadata peta.
-type MapHandler struct{}
+type MapHandler struct {
+	spatialRepo *repository.SpatialRepository
+}
 
-func NewMapHandler() *MapHandler {
-	return &MapHandler{}
+func NewMapHandler(spatialRepo *repository.SpatialRepository) *MapHandler {
+	return &MapHandler{spatialRepo: spatialRepo}
 }
 
 // LayerConfig mendefinisikan metadata satu layer peta untuk UI.
@@ -89,13 +93,23 @@ func (h *MapHandler) GetLayers(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetFeatures mengembalikan fitur spasial untuk layer tertentu.
-// GET /api/v1/map/features
+// GET /api/v1/map/features?layer=...
 func (h *MapHandler) GetFeatures(w http.ResponseWriter, r *http.Request) {
 	layer := r.URL.Query().Get("layer")
+	if layer == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Parameter 'layer' wajib diisi",
+		})
+		return
+	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"type":     "FeatureCollection",
-		"layer":    layer,
-		"features": []interface{}{},
-	})
+	features, err := h.spatialRepo.GetLayerFeatures(r.Context(), layer)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, features)
 }

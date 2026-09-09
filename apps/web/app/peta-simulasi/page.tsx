@@ -40,6 +40,17 @@ export default function PetaSimulasiPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [layersData, setLayersData] = useState<Record<string, any>>({});
+  const [isochroneData, setIsochroneData] = useState<any | null>(null);
+
+  const fetchLayerData = async (layerId: string) => {
+    try {
+      const data = await apiClient.getLayerFeatures(layerId);
+      setLayersData(prev => ({ ...prev, [layerId]: data }));
+    } catch (err) {
+      console.error(`Gagal memuat layer ${layerId}:`, err);
+    }
+  };
 
   useEffect(() => {
     const user = localStorage.getItem('user');
@@ -47,6 +58,7 @@ export default function PetaSimulasiPage() {
       router.push('/login');
     } else {
       setIsAuthenticated(true);
+      fetchLayerData('transjakarta');
     }
   }, [router]);
 
@@ -59,7 +71,13 @@ export default function PetaSimulasiPage() {
   }
 
   const toggleLayer = (id: string) => {
-    setActiveLayers(prev => ({ ...prev, [id]: !prev[id] }));
+    setActiveLayers(prev => {
+      const nextActive = !prev[id];
+      if (nextActive && !layersData[id]) {
+        fetchLayerData(id);
+      }
+      return { ...prev, [id]: nextActive };
+    });
   };
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -121,6 +139,14 @@ export default function PetaSimulasiPage() {
         stop_name: `Halte Usulan (${selectedLocation.latitude.toFixed(4)}, ${selectedLocation.longitude.toFixed(4)})`,
       });
       setSimulationResult(result);
+
+      // Ambil poligon isochrone jalan kaki 5 dan 10 menit
+      try {
+        const iso = await apiClient.getIsochrone(selectedLocation.latitude, selectedLocation.longitude);
+        setIsochroneData(iso);
+      } catch (isoErr) {
+        console.warn("Isochrone fetch failed:", isoErr);
+      }
     } catch (err: any) {
       alert(`Error simulasi: ${err.message || 'Gagal menjalankan simulasi'}`);
     } finally {
@@ -195,6 +221,9 @@ export default function PetaSimulasiPage() {
             styleName="street-v2.0"
             targetLocation={targetLocation}
             selectedLocation={selectedLocation}
+            activeLayers={activeLayers}
+            layersData={layersData}
+            isochroneData={isochroneData}
             onClick={handleMapClick}
           />
 

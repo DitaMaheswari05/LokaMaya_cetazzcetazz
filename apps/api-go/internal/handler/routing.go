@@ -2,26 +2,37 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
+
+	"lokamaya/api-go/internal/repository"
 )
 
-// RoutingHandler menangani request routing dan isochrone via OSRM.
-// TODO: implementasi lengkap dengan RoutingService
+// RoutingHandler menangani request routing dan isochrone pejalan kaki.
 type RoutingHandler struct {
-	// service *service.RoutingService
+	spatialRepo *repository.SpatialRepository
 }
 
-func NewRoutingHandler() *RoutingHandler {
-	return &RoutingHandler{}
+func NewRoutingHandler(spatialRepo *repository.SpatialRepository) *RoutingHandler {
+	return &RoutingHandler{spatialRepo: spatialRepo}
 }
 
-// GetIsochrone mengembalikan isochrone GeoJSON dari suatu titik berdasarkan waktu tempuh.
-// GET /api/v1/routing/isochrone?lat=...&lng=...&duration=...
+// GetIsochrone mengembalikan isochrone GeoJSON dari suatu titik berdasarkan jangkauan jalan kaki 5-10 menit.
+// GET /api/v1/routing/isochrone?lat=...&lng=...
 func (h *RoutingHandler) GetIsochrone(w http.ResponseWriter, r *http.Request) {
-	// TODO: implementasi
-	// 1. Parse query params: lat, lng, duration (menit), profile (walking/driving)
-	// 2. Panggil RoutingService.GetIsochrone() → proxy ke OSRM
-	// 3. Return GeoJSON FeatureCollection
-	respondError(w, http.StatusNotImplemented, "belum diimplementasi")
+	latStr := r.URL.Query().Get("lat")
+	lngStr := r.URL.Query().Get("lng")
+
+	lat, err1 := strconv.ParseFloat(latStr, 64)
+	lng, err2 := strconv.ParseFloat(lngStr, 64)
+	if err1 != nil || err2 != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Query parameter 'lat' dan 'lng' wajib berupa angka koordinat valid",
+		})
+		return
+	}
+
+	isochrone := h.spatialRepo.GenerateIsochrone(lat, lng)
+	writeJSON(w, http.StatusOK, isochrone)
 }
 
 // GetRoute mengembalikan rute terbaik antara dua titik.
