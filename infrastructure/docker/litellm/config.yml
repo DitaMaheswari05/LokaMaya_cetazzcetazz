@@ -8,7 +8,6 @@ litellm_settings:
   cache_params:
     host: "redis"
     port: 6379
-    password: "os.environ/REDIS_PASSWORD"
     namespace: "litellm.cache"
     ttl: 3600
   drop_params: true
@@ -22,4 +21,10 @@ model_list:
       rpm: 1000
       tpm: 1000000
       timeout: 30
-    
+  - model_name: gemini-1.5-flash
+    litellm_params:
+      model: gemini/gemini-1.5-flash
+      api_key: "os.environ/GEMINI_API_KEY"
+      rpm: 1000
+      tpm: 1000000
+      timeout: 30

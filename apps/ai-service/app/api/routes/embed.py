@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
+from app.ml.embedder import get_embedder
 
 router = APIRouter()
 
@@ -15,15 +16,9 @@ class EmbedResponse(BaseModel):
 @router.post("", response_model=EmbedResponse)
 async def embed(request: EmbedRequest) -> EmbedResponse:
     """
-    Generate embedding vektor untuk satu atau lebih teks menggunakan BGE-M3.
-
-    Dipanggil oleh Go API untuk RAG: teks query regulasi → vector → pgvector search.
-
-    TODO: implementasi dengan ml.embedder.Embedder
+    Generate embedding vektor untuk satu atau lebih teks menggunakan BGE-M3 (1024-dimensi).
+    Dipakai oleh Go API untuk RAG dokumen regulasi tata ruang dan pencarian semantik via pgvector.
     """
-    # TODO: implementasi
-    # from app.ml.embedder import get_embedder
-    # embedder = get_embedder()
-    # embeddings = embedder.encode(request.texts)
-    # return EmbedResponse(embeddings=embeddings.tolist())
-    raise NotImplementedError("belum diimplementasi")
+    embedder = get_embedder()
+    embeddings = embedder.encode(request.texts)
+    return EmbedResponse(embeddings=embeddings.tolist())

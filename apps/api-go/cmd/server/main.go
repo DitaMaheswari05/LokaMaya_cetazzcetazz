@@ -25,7 +25,7 @@ func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
-	// config.Load() akan fatal jika JWT_SECRET tidak dikonfigurasi dengan benar
+	// config.Load() membaca .env dan environment variables
 	cfg := config.Load()
 	log.Info().Str("port", cfg.Port).Msg("memulai LokaMaya Go API")
 
@@ -48,27 +48,30 @@ func main() {
 	log.Info().Msg("Redis terhubung")
 
 	// ─── Clients (HTTP clients ke service eksternal)
-	_ = client.NewOSRMClient(cfg.OSRMURL)
+	osrmCli := client.NewOSRMClient(cfg.OSRMURL)
 	_ = client.NewAIClient(cfg.AIServiceURL)
-	_ = client.NewLiteLLMClient(cfg.LiteLLMURL, cfg.LiteLLMAPIKey)
-	// TODO: inject clients ke service saat implementasi
+	litellmCli := client.NewLiteLLMClient(cfg.LiteLLMURL, cfg.LiteLLMAPIKey)
 
 	// ─── Repositories
 	userRepo := repository.NewUserRepository(db)
+	spatialRepo := repository.NewSpatialRepository(db)
 
 	// ─── Services
 	authSvc := service.NewAuthService(userRepo, redisClient, cfg)
+	analysisSvc := service.NewAnalysisService(spatialRepo, litellmCli, osrmCli)
+	chatSvc := service.NewChatService(litellmCli, analysisSvc)
 
 	// ─── Handlers
 	healthH := handler.NewHealthHandler()
 	mapH := handler.NewMapHandler()
-	analysisH := handler.NewAnalysisHandler()
+	analysisH := handler.NewAnalysisHandler(analysisSvc)
 	routingH := handler.NewRoutingHandler()
 	regulationsH := handler.NewRegulationsHandler()
 	communityH := handler.NewCommunityHandler()
 	authH := handler.NewAuthHandler(authSvc)
+	chatH := handler.NewChatHandler(chatSvc)
 
-	r := router.New(healthH, mapH, analysisH, routingH, regulationsH, communityH, authH, authSvc)
+	r := router.New(healthH, mapH, analysisH, routingH, regulationsH, communityH, authH, chatH, authSvc)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.Port),

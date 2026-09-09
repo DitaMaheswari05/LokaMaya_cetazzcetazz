@@ -5,15 +5,16 @@ FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
-# Install git untuk go mod download (beberapa module butuh git)
-RUN apk add --no-cache git
+ENV GOTOOLCHAIN=auto
 
-# Copy go.mod dan go.sum dulu (memanfaatkan Docker layer cache)
-COPY go.mod go.sum* ./
-RUN go mod download
+# Install git untuk go mod download & tidy
+RUN apk add --no-cache git
 
 # Copy seluruh source code
 COPY . .
+
+# Pastikan go.sum lengkap dan download semua dependency
+RUN go mod tidy
 
 # Build binary statik — CGO_ENABLED=0 agar tidak butuh libc di runtime
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /api ./cmd/server

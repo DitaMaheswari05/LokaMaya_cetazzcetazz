@@ -12,7 +12,6 @@ import (
 )
 
 // New membuat dan mengembalikan chi Router dengan semua route terdaftar.
-// Mirip dengan registrasi router di FastAPI (app.include_router).
 func New(
 	healthH *handler.HealthHandler,
 	mapH *handler.MapHandler,
@@ -21,6 +20,7 @@ func New(
 	regulationsH *handler.RegulationsHandler,
 	communityH *handler.CommunityHandler,
 	authH *handler.AuthHandler,
+	chatH *handler.ChatHandler,
 	authSvc service.AuthService,
 ) http.Handler {
 	r := chi.NewRouter()
@@ -34,7 +34,7 @@ func New(
 
 	r.Route("/api/v1", func(r chi.Router) {
 
-		// Auth — public routes (tidak butuh JWT)
+		// Auth — public routes (tidak butuh JWT) - TETAP DIPERTAHANKAN
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", authH.Register)
 			r.Post("/login", authH.Login)
@@ -48,10 +48,17 @@ func New(
 			r.Get("/features", mapH.GetFeatures)
 		})
 
-		// Analysis — analisis spasial dan aksesibilitas
+		// Analysis — analisis spasial dan simulasi perubahan halte
 		r.Route("/analysis", func(r chi.Router) {
+			r.Post("/simulate", analysisH.Simulate)
+			r.Post("/compare", analysisH.Compare)
 			r.Post("/spatial", analysisH.RunSpatialAnalysis)
 			r.Post("/accessibility", analysisH.GetAccessibilityScore)
+		})
+
+		// Chat — AI Chatbot Assistant dengan Agentic Tool Calling
+		r.Route("/chat", func(r chi.Router) {
+			r.Post("/", chatH.Chat)
 		})
 
 		// Routing — isochrone dan route via OSRM

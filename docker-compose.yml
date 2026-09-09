@@ -23,12 +23,15 @@ services:
       - "8080:8080"
     environment:
       - GO_API_PORT=8080
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-lokamaya}?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
       - OSRM_URL=http://osrm:5000
       - AI_SERVICE_URL=http://ai-service:8001
       - LITELLM_URL=http://litellm:4000
       - LITELLM_API_KEY=${LITELLM_API_KEY}
+      - JWT_SECRET=${JWT_SECRET:-lokamaya-super-secret-key-change-in-production-min-32-chars}
+      - JWT_EXPIRY_HOURS=${JWT_EXPIRY_HOURS:-24}
+      - BCRYPT_COST=${BCRYPT_COST:-12}
       - NEXT_PUBLIC_MAPID_API_KEY=${NEXT_PUBLIC_MAPID_API_KEY}
     depends_on:
       postgres:
@@ -36,7 +39,7 @@ services:
       redis:
         condition: service_healthy
       ai-service:
-        condition: service_healthy
+        condition: service_started
       litellm:
         condition: service_started
     healthcheck:
@@ -74,16 +77,18 @@ services:
       - "4000:4000"
     environment:
       - LITELLM_MASTER_KEY=${LITELLM_API_KEY}
+      - GEMINI_API_KEY=${GOOGLE_AI_STUDIO_API_KEY}
       - GOOGLE_AI_STUDIO_API_KEY=${GOOGLE_AI_STUDIO_API_KEY}
-    # Konfigurasi model via file (opsional; bisa juga via env saja)
-    # volumes:
-    #   - ./infrastructure/litellm/config.yaml:/app/config.yaml
-    # command: ["--config", "/app/config.yaml"]
+    volumes:
+      - ./infrastructure/docker/litellm/config.yml:/app/config.yaml
+    command: ["--config", "/app/config.yaml"]
     restart: unless-stopped
 
   # ─── Database — PostgreSQL + PostGIS + pgvector ───────────────────────────
   postgres:
-    image: pgvector/pgvector:pg16
+    build:
+      context: ./infrastructure/docker/postgres
+      dockerfile: Dockerfile
     ports:
       - "5432:5432"
     environment:

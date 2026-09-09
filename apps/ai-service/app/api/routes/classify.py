@@ -1,26 +1,20 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
+from app.ml.classifier import get_classifier
 
 router = APIRouter()
 
-# Label default untuk klasifikasi Community Maps
-# TODO: sesuaikan dengan kategori MAPID Community Maps yang aktual
+# Label default sesuai PRD LokaMaya: menyaring aspirasi warga terkait transit/pejalan kaki dari noise
 DEFAULT_LABELS = [
-    "perumahan",
-    "komersial",
-    "industri",
-    "fasilitas_umum",
-    "ruang_terbuka_hijau",
-    "pendidikan",
-    "kesehatan",
-    "transportasi",
-    "lainnya",
+    "aspirasi_transit_pejalan_kaki",
+    "keluhan_fasilitas_halte",
+    "noise_non_transit",
 ]
 
 
 class ClassifyRequest(BaseModel):
     text: str
-    labels: list[str] | None = None  # jika None, pakai DEFAULT_LABELS
+    labels: list[str] | None = None
 
 
 class ClassifyResponse(BaseModel):
@@ -31,16 +25,10 @@ class ClassifyResponse(BaseModel):
 @router.post("", response_model=ClassifyResponse)
 async def classify(request: ClassifyRequest) -> ClassifyResponse:
     """
-    Klasifikasi teks Community Maps menggunakan IndoBERT.
-
-    Dipanggil oleh Go API untuk menentukan kategori suatu lokasi/komunitas.
-
-    TODO: implementasi dengan ml.classifier.Classifier
+    Klasifikasi teks aspirasi Community Maps menggunakan IndoBERT (Zero-Shot).
+    Menentukan apakah postingan merupakan aspirasi transit/halte atau sekadar noise.
     """
-    # TODO: implementasi
-    # from app.ml.classifier import get_classifier
-    # labels = request.labels or DEFAULT_LABELS
-    # classifier = get_classifier()
-    # result = classifier.classify(request.text, labels)
-    # return ClassifyResponse(label=result["label"], confidence=result["confidence"])
-    raise NotImplementedError("belum diimplementasi")
+    labels = request.labels or DEFAULT_LABELS
+    classifier = get_classifier()
+    result = classifier.classify(request.text, labels)
+    return ClassifyResponse(label=result["label"], confidence=result["confidence"])

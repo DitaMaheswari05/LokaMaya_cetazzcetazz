@@ -48,19 +48,21 @@ type ClassifyResponse struct {
 }
 
 // Embed memanggil ai-service untuk menghasilkan embedding teks via BGE-M3.
-// TODO: implementasi
 func (c *AIClient) Embed(ctx context.Context, texts []string) (*EmbedResponse, error) {
-	// TODO: implementasi
-	_ = ctx
-	return nil, fmt.Errorf("belum diimplementasi")
+	var resp EmbedResponse
+	if err := c.postJSON(ctx, "/embed", EmbedRequest{Texts: texts}, &resp); err != nil {
+		return nil, fmt.Errorf("gagal memanggil ai-service /embed: %w", err)
+	}
+	return &resp, nil
 }
 
 // Classify memanggil ai-service untuk klasifikasi teks via IndoBERT.
-// TODO: implementasi
 func (c *AIClient) Classify(ctx context.Context, text string, labels []string) (*ClassifyResponse, error) {
-	// TODO: implementasi
-	_ = ctx
-	return nil, fmt.Errorf("belum diimplementasi")
+	var resp ClassifyResponse
+	if err := c.postJSON(ctx, "/classify", ClassifyRequest{Text: text, Labels: labels}, &resp); err != nil {
+		return nil, fmt.Errorf("gagal memanggil ai-service /classify: %w", err)
+	}
+	return &resp, nil
 }
 
 // postJSON adalah helper HTTP POST dengan JSON body dan response decode.
