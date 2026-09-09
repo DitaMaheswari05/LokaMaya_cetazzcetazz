@@ -20,16 +20,12 @@ type Config struct {
 	MapIDAPIKey   string
 
 	// Auth & Security
-	JWTSecret      string // Secret key untuk sign JWT — WAJIB diisi di .env
-	JWTExpiryHours int    // Masa berlaku token dalam jam (default: 24)
-	BcryptCost     int    // Cost factor bcrypt (default: 12, range 4-31)
+	JWTSecret      string
+	JWTExpiryHours int
+	BcryptCost     int
 }
 
-// Load membaca environment variable dan mengembalikan Config.
-// File .env akan dimuat otomatis jika ada (untuk development lokal).
 func Load() *Config {
-	// Cari .env dari beberapa lokasi — mendukung run dari mana saja dalam monorepo
-	// Urutan: ./  →  ../  →  ../../  (project root)
 	loadDotEnv()
 
 	jwtExpiry := getEnvInt("JWT_EXPIRY_HOURS", 24)
@@ -74,20 +70,13 @@ func getEnvInt(key string, defaultValue int) int {
 	return defaultValue
 }
 
-// loadDotEnv mencoba memuat .env dari beberapa lokasi.
-// Ini diperlukan di monorepo karena posisi .env (project root) berbeda
-// dengan working directory saat go run dijalankan (apps/api-go/).
-// Urutan pencarian: ./  →  ../  →  ../../  →  ../../../
-//
-// PENTING: menggunakan Overload() bukan Load() agar nilai di .env
-// SELALU override env var sistem (berguna saat dev punya DATABASE_URL
-// atau env var lain yang di-set global untuk project lain).
 func loadDotEnv() {
 	candidates := []string{
 		".env",
 		"../.env",
 		"../../.env",
 		"../../../.env",
+		"../../../../.env",
 	}
 	for _, path := range candidates {
 		if err := godotenv.Overload(path); err == nil {
