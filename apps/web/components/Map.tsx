@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
-import Map from 'react-map-gl/maplibre';
+import Map, { Marker } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 interface MapComponentProps {
@@ -9,13 +9,17 @@ interface MapComponentProps {
   className?: string;
   children?: ReactNode;
   targetLocation?: { latitude: number, longitude: number, zoom?: number } | null;
+  selectedLocation?: { latitude: number, longitude: number } | null;
+  onClick?: (evt: { lngLat: { lng: number; lat: number } }) => void;
 }
 
 export default function MapComponent({
   styleName = 'street-v2.0',
   className = "w-full h-full min-h-[600px] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative",
   children,
-  targetLocation
+  targetLocation,
+  selectedLocation,
+  onClick,
 }: MapComponentProps) {
   const mapIdApiKey = process.env.NEXT_PUBLIC_MAPID_API_KEY;
 
@@ -62,10 +66,25 @@ export default function MapComponent({
       <Map
         {...viewState}
         onMove={evt => setViewState(evt.viewState)}
+        onClick={onClick}
         mapStyle={mapStyleUrl}
         style={{ width: '100%', height: '100%' }}
         attributionControl={true}
       >
+        {selectedLocation && (
+          <Marker
+            longitude={selectedLocation.longitude}
+            latitude={selectedLocation.latitude}
+            anchor="bottom"
+          >
+            <div className="flex flex-col items-center cursor-pointer group">
+              <div className="w-8 h-8 rounded-full bg-[#ED6B23] border-2 border-white shadow-lg flex items-center justify-center animate-bounce">
+                <div className="w-2.5 h-2.5 bg-white rounded-full" />
+              </div>
+              <div className="w-2 h-2 bg-[#ED6B23] rotate-45 -mt-1" />
+            </div>
+          </Marker>
+        )}
         {children}
       </Map>
     </div>
