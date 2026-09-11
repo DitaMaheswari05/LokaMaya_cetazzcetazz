@@ -1076,26 +1076,6 @@ export default function PetaSimulasiPage() {
             </div>
           )}
 
-          {/* Center Info Overlay */}
-          <div className="absolute top-24 sm:top-6 left-1/2 -translate-x-1/2 z-10 bg-[#1E1E3A]/85 backdrop-blur-[8px] border border-white/10 rounded-[14px] px-6 py-2.5 flex flex-col items-center shadow-lg pointer-events-none text-center">
-            <span className="text-white text-[13px] font-semibold leading-[18px]">
-              {selectedLocation
-                ? (simulationResult?.stop_name
-                    ? simulationResult.stop_name
-                    : `Titik Terpilih: ${selectedLocation.latitude.toFixed(4)}, ${selectedLocation.longitude.toFixed(4)}`)
-                : (tripPickTarget === 'origin'
-                    ? 'Klik peta untuk menetapkan Titik Asal (A)'
-                    : tripPickTarget === 'destination'
-                    ? 'Klik peta untuk menetapkan Titik Tujuan (B)'
-                    : 'Klik sembarang titik di peta atau tanyakan pada AI')}
-            </span>
-            <span className="text-white/50 text-[11px] leading-[15px] mt-[2px]">
-              {selectedLocation
-                ? 'Pilih aksi pada menu di bawah atau tanyakan ke AI'
-                : 'LokaMaya AI siap menganalisis halte & bottleneck perjalanan'}
-            </span>
-          </div>
-
           {/* Corridor Pareto Candidates Floating Bar */}
           {optimalCandidates.length > 0 && (
             <div className="absolute top-20 sm:top-20 left-1/2 -translate-x-1/2 z-15 bg-white/95 backdrop-blur-md border border-[#2D2A70]/20 rounded-xl px-3 py-1.5 shadow-lg flex items-center gap-2">

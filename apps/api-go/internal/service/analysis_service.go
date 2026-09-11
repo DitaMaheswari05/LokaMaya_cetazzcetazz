@@ -235,7 +235,7 @@ func (s *AnalysisService) generateAINarrative(
 	prompt := fmt.Sprintf(`Kamu adalah LokaMaya AI Assistant. Tugasmu adalah menyusun narasi ringkas (maksimal 2 paragraf) berbahasa Indonesia yang profesional, jelas, dan berbasis fakta.
 Skenario: %s (%s) di koordinat (%.4f, %.4f)
 - Skor Akses Jalan Kaki: %d/100 (Kategori: %s, Est. Warga terjangkau 5-min: %d jiwa)
-- Skor Ekonomi UMKM: %d/100 (Transaksi Struk Go: %d, PKL/Warung Informal: %d)
+- Skor Ekonomi UMKM: %d/100 (Kategori: %s, Transaksi Struk Go: %d, PKL/Warung Informal: %d)
 - Kelayakan Lokasi: Status %s di Zonasi %s (%s), Risiko Banjir: %s
 - Rekomendasi Teknis: %s
 - Konektivitas Rute: %d rute terhubung`,
