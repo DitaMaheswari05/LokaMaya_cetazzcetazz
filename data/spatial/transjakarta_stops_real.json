@@ -1,0 +1,1562 @@
+[
+  {
+    "name": "Blok M",
+    "corridor": "Blok M - Kota",
+    "lat": -6.243312,
+    "lng": 106.80175
+  },
+  {
+    "name": "Asean",
+    "corridor": "Blok M - Kota",
+    "lat": -6.239911,
+    "lng": 106.79897
+  },
+  {
+    "name": "Masjid Agung",
+    "corridor": "Blok M - Kota",
+    "lat": -6.236472,
+    "lng": 106.798412
+  },
+  {
+    "name": "Bundaran Senayan",
+    "corridor": "Blok M - Kota",
+    "lat": -6.227766,
+    "lng": 106.800954
+  },
+  {
+    "name": "Gelora Bung Karno",
+    "corridor": "Blok M - Kota",
+    "lat": -6.224137,
+    "lng": 106.805837
+  },
+  {
+    "name": "Polda Metro Jaya",
+    "corridor": "Blok M - Kota",
+    "lat": -6.221044,
+    "lng": 106.810241
+  },
+  {
+    "name": "Karet",
+    "corridor": "Blok M - Kota",
+    "lat": -6.212352,
+    "lng": 106.819981
+  },
+  {
+    "name": "Dukuh Atas 1",
+    "corridor": "Blok M - Kota",
+    "lat": -6.205621,
+    "lng": 106.822203
+  },
+  {
+    "name": "Tosari",
+    "corridor": "Blok M - Kota",
+    "lat": -6.196742,
+    "lng": 106.823051
+  },
+  {
+    "name": "Bundaran HI Astra",
+    "corridor": "Blok M - Kota",
+    "lat": -6.192977,
+    "lng": 106.822954
+  },
+  {
+    "name": "MH Thamrin",
+    "corridor": "Blok M - Kota",
+    "lat": -6.188038,
+    "lng": 106.82296
+  },
+  {
+    "name": "Kebon Sirih Arah Utara",
+    "corridor": "Blok M - Kota",
+    "lat": -6.182776,
+    "lng": 106.8228
+  },
+  {
+    "name": "Monumen Nasional",
+    "corridor": "Blok M - Kota",
+    "lat": -6.176246,
+    "lng": 106.822804
+  },
+  {
+    "name": "Harmoni",
+    "corridor": "Blok M - Kota",
+    "lat": -6.162598,
+    "lng": 106.819886
+  },
+  {
+    "name": "Sawah Besar",
+    "corridor": "Blok M - Kota",
+    "lat": -6.157375,
+    "lng": 106.818645
+  },
+  {
+    "name": "Mangga Besar",
+    "corridor": "Blok M - Kota",
+    "lat": -6.153266,
+    "lng": 106.817481
+  },
+  {
+    "name": "Taman Sari",
+    "corridor": "Blok M - Kota",
+    "lat": -6.149307,
+    "lng": 106.816641
+  },
+  {
+    "name": "Glodok",
+    "corridor": "Blok M - Kota",
+    "lat": -6.144448,
+    "lng": 106.815417
+  },
+  {
+    "name": "Kali Besar",
+    "corridor": "Blok M - Kota",
+    "lat": -6.135355,
+    "lng": 106.81143
+  },
+  {
+    "name": "Museum Sejarah Jakarta",
+    "corridor": "Blok M - Kota",
+    "lat": -6.133882,
+    "lng": 106.81214
+  },
+  {
+    "name": "Kota",
+    "corridor": "Blok M - Kota",
+    "lat": -6.136827,
+    "lng": 106.814876
+  },
+  {
+    "name": "Kebon Sirih Arah Selatan",
+    "corridor": "Blok M - Kota",
+    "lat": -6.184784,
+    "lng": 106.82326
+  },
+  {
+    "name": "Kejaksaan Agung",
+    "corridor": "Blok M - Kota",
+    "lat": -6.24046,
+    "lng": 106.798482
+  },
+  {
+    "name": "Balai Kota",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.180428,
+    "lng": 106.826431
+  },
+  {
+    "name": "Gambir 2",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.178929,
+    "lng": 106.83106
+  },
+  {
+    "name": "Kwitang",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.181014,
+    "lng": 106.838645
+  },
+  {
+    "name": "Pasar Senen",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.178204,
+    "lng": 106.842454
+  },
+  {
+    "name": "Galur",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.174342,
+    "lng": 106.854846
+  },
+  {
+    "name": "Rawa Selatan",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.173878,
+    "lng": 106.858086
+  },
+  {
+    "name": "Pasar Cempaka Putih",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.172284,
+    "lng": 106.862437
+  },
+  {
+    "name": "Cempaka Baru",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.170369,
+    "lng": 106.866578
+  },
+  {
+    "name": "Sumur Batu",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.168625,
+    "lng": 106.870252
+  },
+  {
+    "name": "Cempaka Mas",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.166534,
+    "lng": 106.875901
+  },
+  {
+    "name": "Pedongkelan",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.16791,
+    "lng": 106.882494
+  },
+  {
+    "name": "Perintis Kemerdekaan",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.171704,
+    "lng": 106.888712
+  },
+  {
+    "name": "Pulo Mas",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.174703,
+    "lng": 106.892807
+  },
+  {
+    "name": "Bermis",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.178151,
+    "lng": 106.89847
+  },
+  {
+    "name": "Pulo Gadung",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.183276,
+    "lng": 106.909064
+  },
+  {
+    "name": "Senen Raya",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.176251,
+    "lng": 106.84023
+  },
+  {
+    "name": "RSPAD",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.175485,
+    "lng": 106.83674
+  },
+  {
+    "name": "Pejambon",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.173503,
+    "lng": 106.83472
+  },
+  {
+    "name": "Gambir",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.174612,
+    "lng": 106.8304
+  },
+  {
+    "name": "Istiqlal",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.172252,
+    "lng": 106.83093
+  },
+  {
+    "name": "Juanda",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.168086,
+    "lng": 106.830792
+  },
+  {
+    "name": "Pecenongan",
+    "corridor": "Pulo Gadung - Monas",
+    "lat": -6.167825,
+    "lng": 106.828169
+  },
+  {
+    "name": "Kalideres",
+    "corridor": "Kalideres - Monas via Veteran",
+    "lat": -6.154449,
+    "lng": 106.7055
+  },
+  {
+    "name": "Pesakih",
+    "corridor": "Kalideres - Monas via Veteran",
+    "lat": -6.154742,
+    "lng": 106.715232
+  },
+  {
+    "name": "Sumur Bor",
+    "corridor": "Kalideres - Monas via Veteran",
+    "lat": -6.152961,
+    "lng": 106.719285
+  },
+  {
+    "name": "Rawa Buaya",
+    "corridor": "Kalideres - Monas via Veteran",
+    "lat": -6.153867,
+    "lng": 106.726202
+  },
+  {
+    "name": "Jembatan Baru",
+    "corridor": "Kalideres - Monas via Veteran",
+    "lat": -6.154762,
+    "lng": 106.730332
+  },
+  {
+    "name": "Pulo Nangka",
+    "corridor": "Kalideres - Monas via Veteran",
+    "lat": -6.154555,
+    "lng": 106.7381
+  },
+  {
+    "name": "Jembatan Gantung",
+    "corridor": "Kalideres - Monas via Veteran",
+    "lat": -6.155473,
+    "lng": 106.749473
+  },
+  {
+    "name": "Taman Kota",
+    "corridor": "Kalideres - Monas via Veteran",
+    "lat": -6.157142,
+    "lng": 106.757905
+  },
+  {
+    "name": "Jelambar",
+    "corridor": "Kalideres - Monas via Veteran",
+    "lat": -6.166481,
+    "lng": 106.786459
+  },
+  {
+    "name": "Grogol",
+    "corridor": "Kalideres - Monas via Veteran",
+    "lat": -6.166769,
+    "lng": 106.78976
+  },
+  {
+    "name": "Roxy",
+    "corridor": "Kalideres - Monas via Veteran",
+    "lat": -6.166252,
+    "lng": 106.796803
+  },
+  {
+    "name": "Petojo",
+    "corridor": "Kalideres - Monas via Veteran",
+    "lat": -6.169948,
+    "lng": 106.816978
+  },
+  {
+    "name": "Damai",
+    "corridor": "Kalideres - Monas via Veteran",
+    "lat": -6.163376,
+    "lng": 106.77514
+  },
+  {
+    "name": "Pasar Pulo Gadung",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.18743,
+    "lng": 106.905953
+  },
+  {
+    "name": "Pemuda Merdeka",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.192448,
+    "lng": 106.904863
+  },
+  {
+    "name": "Layur",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.193579,
+    "lng": 106.899092
+  },
+  {
+    "name": "Pemuda Rawamangun",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.193531,
+    "lng": 106.891608
+  },
+  {
+    "name": "Velodrome",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.19351,
+    "lng": 106.888304
+  },
+  {
+    "name": "Kayu Jati",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.193329,
+    "lng": 106.883664
+  },
+  {
+    "name": "Rawamangun",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.192977,
+    "lng": 106.880327
+  },
+  {
+    "name": "Simpang Pramuka",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.192241,
+    "lng": 106.874002
+  },
+  {
+    "name": "Pramuka Sari",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.192299,
+    "lng": 106.868595
+  },
+  {
+    "name": "Utan Kayu",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.192785,
+    "lng": 106.864588
+  },
+  {
+    "name": "Pasar Genjing",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.194491,
+    "lng": 106.860956
+  },
+  {
+    "name": "Flyover Pramuka",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.19896,
+    "lng": 106.854551
+  },
+  {
+    "name": "Manggarai",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.208865,
+    "lng": 106.847488
+  },
+  {
+    "name": "Pasar Rumput",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.207149,
+    "lng": 106.8411
+  },
+  {
+    "name": "Halimun 4",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.20509,
+    "lng": 106.832571
+  },
+  {
+    "name": "Galunggung",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.204347,
+    "lng": 106.823351
+  },
+  {
+    "name": "Halimun 3",
+    "corridor": "Pulo Gadung - Galunggung",
+    "lat": -6.205187,
+    "lng": 106.834732
+  },
+  {
+    "name": "Kampung Melayu",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.224588,
+    "lng": 106.866655
+  },
+  {
+    "name": "Matraman Baru",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.212879,
+    "lng": 106.861112
+  },
+  {
+    "name": "Kesatrian",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.20856,
+    "lng": 106.859218
+  },
+  {
+    "name": "Tegalan",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.20312,
+    "lng": 106.857094
+  },
+  {
+    "name": "Matraman",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.200022,
+    "lng": 106.854395
+  },
+  {
+    "name": "Paseban",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.196822,
+    "lng": 106.850967
+  },
+  {
+    "name": "Salemba",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.193393,
+    "lng": 106.848859
+  },
+  {
+    "name": "Kramat Sentiong",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.188017,
+    "lng": 106.845898
+  },
+  {
+    "name": "Pal Putih",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.184657,
+    "lng": 106.843967
+  },
+  {
+    "name": "Senen Sentral",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.178152,
+    "lng": 106.842002
+  },
+  {
+    "name": "Lapangan Banteng",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.16607,
+    "lng": 106.83901
+  },
+  {
+    "name": "Pasar Baru Timur",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.162278,
+    "lng": 106.838066
+  },
+  {
+    "name": "Jembatan Merah",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.146731,
+    "lng": 106.83422
+  },
+  {
+    "name": "Gunung Sahari",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.136821,
+    "lng": 106.832315
+  },
+  {
+    "name": "Pademangan",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.133712,
+    "lng": 106.831591
+  },
+  {
+    "name": "Ancol",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.127563,
+    "lng": 106.83039
+  },
+  {
+    "name": "Bali Mester",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.21578,
+    "lng": 106.866369
+  },
+  {
+    "name": "Jatinegara",
+    "corridor": "Kampung Melayu - Ancol",
+    "lat": -6.221451,
+    "lng": 106.868087
+  },
+  {
+    "name": "Ragunan",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.305728,
+    "lng": 106.81899
+  },
+  {
+    "name": "Simpang Ragunan",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.294596,
+    "lng": 106.822111
+  },
+  {
+    "name": "Jati Barat",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.290953,
+    "lng": 106.82362
+  },
+  {
+    "name": "Jati Padang",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.285343,
+    "lng": 106.826286
+  },
+  {
+    "name": "Pejaten",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.278385,
+    "lng": 106.829687
+  },
+  {
+    "name": "Buncit Indah",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.274343,
+    "lng": 106.830266
+  },
+  {
+    "name": "Warung Jati",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.262377,
+    "lng": 106.829762
+  },
+  {
+    "name": "Warung Buncit",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.25697,
+    "lng": 106.828067
+  },
+  {
+    "name": "Duren Tiga",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.252331,
+    "lng": 106.826951
+  },
+  {
+    "name": "Mampang Prapatan",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.242663,
+    "lng": 106.825685
+  },
+  {
+    "name": "Underpass Kuningan",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.234712,
+    "lng": 106.829043
+  },
+  {
+    "name": "Patra Kuningan",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.232627,
+    "lng": 106.832079
+  },
+  {
+    "name": "Kuningan",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.228755,
+    "lng": 106.833168
+  },
+  {
+    "name": "Rasuna Said",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.221593,
+    "lng": 106.832224
+  },
+  {
+    "name": "Karet Kuningan",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.216644,
+    "lng": 106.830727
+  },
+  {
+    "name": "Kuningan Madya",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.213407,
+    "lng": 106.830459
+  },
+  {
+    "name": "Setiabudi",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.209157,
+    "lng": 106.830202
+  },
+  {
+    "name": "Flyover Kuningan",
+    "corridor": "Ragunan - Galunggung",
+    "lat": -6.202779,
+    "lng": 106.827655
+  },
+  {
+    "name": "Kampung Rambutan",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.309801,
+    "lng": 106.882101
+  },
+  {
+    "name": "Tanah Merdeka Arah Barat",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.308216,
+    "lng": 106.87393
+  },
+  {
+    "name": "Flyover Raya Bogor",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.306618,
+    "lng": 106.86565
+  },
+  {
+    "name": "Trikora",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.301945,
+    "lng": 106.868002
+  },
+  {
+    "name": "Pasar Induk",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.294219,
+    "lng": 106.872017
+  },
+  {
+    "name": "Kramat Jati",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.26881,
+    "lng": 106.866589
+  },
+  {
+    "name": "Cililitan",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.262461,
+    "lng": 106.866348
+  },
+  {
+    "name": "Cawang Cililitan",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.257743,
+    "lng": 106.869949
+  },
+  {
+    "name": "Cawang Sentral",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.250475,
+    "lng": 106.873493
+  },
+  {
+    "name": "BNN Arah Barat",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.246687,
+    "lng": 106.873246
+  },
+  {
+    "name": "Cawang",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.245883,
+    "lng": 106.871094
+  },
+  {
+    "name": "Cawang Baru",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.243613,
+    "lng": 106.868748
+  },
+  {
+    "name": "Gelanggang Remaja",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.235459,
+    "lng": 106.86793
+  },
+  {
+    "name": "Bidara Cina",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.229726,
+    "lng": 106.867204
+  },
+  {
+    "name": "BNN Arah Timur",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.246222,
+    "lng": 106.873063
+  },
+  {
+    "name": "Tanah Merdeka Arah Timur",
+    "corridor": "Kampung Rambutan - Kampung Melayu",
+    "lat": -6.307866,
+    "lng": 106.87389
+  },
+  {
+    "name": "Pasar Baru",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.166129,
+    "lng": 106.83483
+  },
+  {
+    "name": "Tarakan",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.17118,
+    "lng": 106.810133
+  },
+  {
+    "name": "Tomang Raya",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.176897,
+    "lng": 106.800386
+  },
+  {
+    "name": "Tanjung Duren Arah Barat",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.175635,
+    "lng": 106.792248
+  },
+  {
+    "name": "Kedoya",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.164433,
+    "lng": 106.763061
+  },
+  {
+    "name": "Kedoya Panjang",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.174498,
+    "lng": 106.765904
+  },
+  {
+    "name": "Duri Kepa",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.185256,
+    "lng": 106.768467
+  },
+  {
+    "name": "Kebon Jeruk",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.19431,
+    "lng": 106.768926
+  },
+  {
+    "name": "Kelapa Dua Sasak",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.205554,
+    "lng": 106.769539
+  },
+  {
+    "name": "Pos Pengumben",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.212933,
+    "lng": 106.772289
+  },
+  {
+    "name": "Arteri",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.218374,
+    "lng": 106.77763
+  },
+  {
+    "name": "Permata Hijau",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.221417,
+    "lng": 106.783267
+  },
+  {
+    "name": "Simprug",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.233964,
+    "lng": 106.786495
+  },
+  {
+    "name": "Kebayoran",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.238436,
+    "lng": 106.783263
+  },
+  {
+    "name": "Bungur",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.252688,
+    "lng": 106.781668
+  },
+  {
+    "name": "Tanah Kusir",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.256997,
+    "lng": 106.781727
+  },
+  {
+    "name": "Pondok Indah",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.267225,
+    "lng": 106.783691
+  },
+  {
+    "name": "Underpass Lebak Bulus",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.286787,
+    "lng": 106.780011
+  },
+  {
+    "name": "Lebak Bulus",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.28938,
+    "lng": 106.774076
+  },
+  {
+    "name": "Pondok Pinang",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.282128,
+    "lng": 106.772028
+  },
+  {
+    "name": "Tanjung Duren Arah Timur",
+    "corridor": "Lebak Bulus - Pasar Baru",
+    "lat": -6.175783,
+    "lng": 106.793104
+  },
+  {
+    "name": "Pinang Ranti",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.291098,
+    "lng": 106.886348
+  },
+  {
+    "name": "Makasar",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.290173,
+    "lng": 106.881172
+  },
+  {
+    "name": "Ciliwung Arah Barat",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.243292,
+    "lng": 106.86356
+  },
+  {
+    "name": "Cikoko Arah Barat",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.243376,
+    "lng": 106.858187
+  },
+  {
+    "name": "Tebet Eco Park Arah Barat",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.243338,
+    "lng": 106.85212
+  },
+  {
+    "name": "Pancoran Tugu Arah Barat",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.2433,
+    "lng": 106.84388
+  },
+  {
+    "name": "Tegal Parang Arah Barat",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.238863,
+    "lng": 106.83022
+  },
+  {
+    "name": "Simpang Kuningan",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.237267,
+    "lng": 106.827929
+  },
+  {
+    "name": "Widya Chandra Arah Barat",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.227374,
+    "lng": 106.817584
+  },
+  {
+    "name": "Senayan Arah Barat",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.213962,
+    "lng": 106.808428
+  },
+  {
+    "name": "Petamburan",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.201963,
+    "lng": 106.799812
+  },
+  {
+    "name": "Kemanggisan Arah Utara",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.18991,
+    "lng": 106.796939
+  },
+  {
+    "name": "Kota Bambu Arah Utara",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.184506,
+    "lng": 106.796739
+  },
+  {
+    "name": "Kali Grogol Arah Utara",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.16106,
+    "lng": 106.7904
+  },
+  {
+    "name": "Jembatan Besi",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.152006,
+    "lng": 106.794881
+  },
+  {
+    "name": "Jembatan Dua",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.14328,
+    "lng": 106.793491
+  },
+  {
+    "name": "Jembatan Tiga Arah Utara",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.133383,
+    "lng": 106.79267
+  },
+  {
+    "name": "Penjaringan",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.126314,
+    "lng": 106.791937
+  },
+  {
+    "name": "Pluit",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.115788,
+    "lng": 106.79125
+  },
+  {
+    "name": "Jembatan Tiga Arah Selatan",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.133377,
+    "lng": 106.79273
+  },
+  {
+    "name": "Kali Grogol Arah Selatan",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.160376,
+    "lng": 106.79097
+  },
+  {
+    "name": "Kota Bambu Arah Selatan",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.185194,
+    "lng": 106.79709
+  },
+  {
+    "name": "Kemanggisan Arah Selatan",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.189783,
+    "lng": 106.797265
+  },
+  {
+    "name": "Senayan Arah Timur",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.214159,
+    "lng": 106.809044
+  },
+  {
+    "name": "Widya Chandra Arah Timur",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.226556,
+    "lng": 106.817451
+  },
+  {
+    "name": "Tegal Parang Arah Timur",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.239005,
+    "lng": 106.83106
+  },
+  {
+    "name": "Pancoran Tugu Arah Timur",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.243082,
+    "lng": 106.84392
+  },
+  {
+    "name": "Tebet Eco Park Arah Timur",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.243056,
+    "lng": 106.85208
+  },
+  {
+    "name": "Cikoko Arah Timur",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.242996,
+    "lng": 106.858144
+  },
+  {
+    "name": "Ciliwung Arah Timur",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.243005,
+    "lng": 106.863512
+  },
+  {
+    "name": "Tanjung Priok",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.10956,
+    "lng": 106.882156
+  },
+  {
+    "name": "Mambo",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.110094,
+    "lng": 106.89239
+  },
+  {
+    "name": "Koja Arah Selatan",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.114384,
+    "lng": 106.893157
+  },
+  {
+    "name": "Walikota Jakarta Utara Arah Selatan",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.118867,
+    "lng": 106.89344
+  },
+  {
+    "name": "Plumpang Arah Selatan",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.128473,
+    "lng": 106.893784
+  },
+  {
+    "name": "Sunter Kelapa Gading Arah Selatan",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.142928,
+    "lng": 106.890928
+  },
+  {
+    "name": "Kodamar",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.162075,
+    "lng": 106.881708
+  },
+  {
+    "name": "Simpang Cempaka",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.165896,
+    "lng": 106.879229
+  },
+  {
+    "name": "Cempaka Putih",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.174226,
+    "lng": 106.876454
+  },
+  {
+    "name": "Pulo Mas Bypass",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.176998,
+    "lng": 106.87603
+  },
+  {
+    "name": "Kayu Putih Rawasari",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.187473,
+    "lng": 106.875451
+  },
+  {
+    "name": "Pemuda Pramuka",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.192822,
+    "lng": 106.875006
+  },
+  {
+    "name": "Utan Kayu Rawamangun",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.197554,
+    "lng": 106.874051
+  },
+  {
+    "name": "Pisangan",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.205521,
+    "lng": 106.873814
+  },
+  {
+    "name": "Flyover Jatinegara",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.215541,
+    "lng": 106.87436
+  },
+  {
+    "name": "Pedati Prumpung",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.220159,
+    "lng": 106.874432
+  },
+  {
+    "name": "Kebon Nanas",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.231662,
+    "lng": 106.87639
+  },
+  {
+    "name": "Halim",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.239069,
+    "lng": 106.878031
+  },
+  {
+    "name": "Simpang Cawang",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.244803,
+    "lng": 106.876004
+  },
+  {
+    "name": "PGC",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.2619,
+    "lng": 106.8657
+  },
+  {
+    "name": "Sunter Kelapa Gading Arah Utara",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.14293,
+    "lng": 106.890714
+  },
+  {
+    "name": "Plumpang Arah Utara",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.128475,
+    "lng": 106.89373
+  },
+  {
+    "name": "Walikota Jakarta Utara Arah Utara",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.118845,
+    "lng": 106.893125
+  },
+  {
+    "name": "Koja Arah Utara",
+    "corridor": "Tanjung Priok - PGC",
+    "lat": -6.114165,
+    "lng": 106.893085
+  },
+  {
+    "name": "Stasiun Jatinegara",
+    "corridor": "Pulo Gebang - Kampung Melayu",
+    "lat": -6.215562,
+    "lng": 106.868058
+  },
+  {
+    "name": "Pasar Enjo",
+    "corridor": "Pulo Gebang - Kampung Melayu",
+    "lat": -6.214854,
+    "lng": 106.878174
+  },
+  {
+    "name": "Flyover Cipinang",
+    "corridor": "Pulo Gebang - Kampung Melayu",
+    "lat": -6.21462,
+    "lng": 106.88224
+  },
+  {
+    "name": "Cipinang",
+    "corridor": "Pulo Gebang - Kampung Melayu",
+    "lat": -6.213631,
+    "lng": 106.889877
+  },
+  {
+    "name": "Stasiun Klender",
+    "corridor": "Pulo Gebang - Kampung Melayu",
+    "lat": -6.213498,
+    "lng": 106.898648
+  },
+  {
+    "name": "Klender",
+    "corridor": "Pulo Gebang - Kampung Melayu",
+    "lat": -6.213567,
+    "lng": 106.903081
+  },
+  {
+    "name": "Kampung Sumur",
+    "corridor": "Pulo Gebang - Kampung Melayu",
+    "lat": -6.214381,
+    "lng": 106.911898
+  },
+  {
+    "name": "Buaran",
+    "corridor": "Pulo Gebang - Kampung Melayu",
+    "lat": -6.215092,
+    "lng": 106.91771
+  },
+  {
+    "name": "Simpang Buaran",
+    "corridor": "Pulo Gebang - Kampung Melayu",
+    "lat": -6.21593,
+    "lng": 106.924384
+  },
+  {
+    "name": "Flyover Pondok Kopi",
+    "corridor": "Pulo Gebang - Kampung Melayu",
+    "lat": -6.216653,
+    "lng": 106.930552
+  },
+  {
+    "name": "Penggilingan",
+    "corridor": "Pulo Gebang - Kampung Melayu",
+    "lat": -6.214133,
+    "lng": 106.939575
+  },
+  {
+    "name": "Walikota Jakarta Timur",
+    "corridor": "Pulo Gebang - Kampung Melayu",
+    "lat": -6.212499,
+    "lng": 106.94537
+  },
+  {
+    "name": "Pulo Gebang",
+    "corridor": "Pulo Gebang - Kampung Melayu",
+    "lat": -6.213309,
+    "lng": 106.95327
+  },
+  {
+    "name": "Pluit Selatan",
+    "corridor": "Tanjung Priok - Pluit",
+    "lat": -6.125236,
+    "lng": 106.79971
+  },
+  {
+    "name": "Pakin",
+    "corridor": "Tanjung Priok - Pluit",
+    "lat": -6.127951,
+    "lng": 106.804748
+  },
+  {
+    "name": "Gedong Panjang",
+    "corridor": "Tanjung Priok - Pluit",
+    "lat": -6.132576,
+    "lng": 106.806024
+  },
+  {
+    "name": "Mangga Dua Raya",
+    "corridor": "Tanjung Priok - Pluit",
+    "lat": -6.13757,
+    "lng": 106.817935
+  },
+  {
+    "name": "Mangga Dua",
+    "corridor": "Tanjung Priok - Pluit",
+    "lat": -6.136117,
+    "lng": 106.826003
+  },
+  {
+    "name": "Landasan Pacu",
+    "corridor": "Tanjung Priok - Pluit",
+    "lat": -6.152119,
+    "lng": 106.85423
+  },
+  {
+    "name": "Danau Agung",
+    "corridor": "Tanjung Priok - Pluit",
+    "lat": -6.146869,
+    "lng": 106.858043
+  },
+  {
+    "name": "Danau Sunter",
+    "corridor": "Tanjung Priok - Pluit",
+    "lat": -6.14122,
+    "lng": 106.856896
+  },
+  {
+    "name": "Sunter Utara",
+    "corridor": "Tanjung Priok - Pluit",
+    "lat": -6.139717,
+    "lng": 106.859198
+  },
+  {
+    "name": "Sunter Karya",
+    "corridor": "Tanjung Priok - Pluit",
+    "lat": -6.137576,
+    "lng": 106.870787
+  },
+  {
+    "name": "Sunter Boulevard Barat",
+    "corridor": "Tanjung Priok - Pluit",
+    "lat": -6.149644,
+    "lng": 106.888982
+  },
+  {
+    "name": "Bandengan",
+    "corridor": "Tanjung Priok - Pluit",
+    "lat": -6.136318,
+    "lng": 106.80347
+  },
+  {
+    "name": "CBD Ciledug",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.223635,
+    "lng": 106.70907
+  },
+  {
+    "name": "Puri Beta 1",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.230596,
+    "lng": 106.72602
+  },
+  {
+    "name": "Petukangan Utara",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.236393,
+    "lng": 106.7476
+  },
+  {
+    "name": "JORR",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.236138,
+    "lng": 106.754899
+  },
+  {
+    "name": "Swadarma",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.237505,
+    "lng": 106.760657
+  },
+  {
+    "name": "Cipulir",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.237767,
+    "lng": 106.765415
+  },
+  {
+    "name": "Seskoal",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.238018,
+    "lng": 106.771219
+  },
+  {
+    "name": "Kebayoran Lama",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.238299,
+    "lng": 106.777528
+  },
+  {
+    "name": "Velbak",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.239378,
+    "lng": 106.785479
+  },
+  {
+    "name": "Mayestik",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.241883,
+    "lng": 106.790748
+  },
+  {
+    "name": "CSW 1",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.239869,
+    "lng": 106.798364
+  },
+  {
+    "name": "Pasar Santa",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.239168,
+    "lng": 106.807773
+  },
+  {
+    "name": "Rawa Barat",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.238912,
+    "lng": 106.816194
+  },
+  {
+    "name": "Tegal Mampang",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.24021,
+    "lng": 106.830969
+  },
+  {
+    "name": "Puri Beta 2",
+    "corridor": "Ciledug - Tegal Mampang",
+    "lat": -6.23055,
+    "lng": 106.723717
+  },
+  {
+    "name": "Jakarta International Stadium",
+    "corridor": "Jakarta International Stadium - Senen",
+    "lat": -6.126689,
+    "lng": 106.85587
+  },
+  {
+    "name": "Jembatan Item",
+    "corridor": "Jakarta International Stadium - Senen",
+    "lat": -6.130964,
+    "lng": 106.855237
+  },
+  {
+    "name": "Kemayoran",
+    "corridor": "Jakarta International Stadium - Senen",
+    "lat": -6.158869,
+    "lng": 106.851581
+  },
+  {
+    "name": "Tanah Tinggi",
+    "corridor": "Jakarta International Stadium - Senen",
+    "lat": -6.171371,
+    "lng": 106.852275
+  },
+  {
+    "name": "Jamsostek 3",
+    "corridor": "Puri Beta - Dukuh Atas",
+    "lat": -6.232321,
+    "lng": 106.820842
+  },
+  {
+    "name": "Jamsostek 2",
+    "corridor": "Puri Beta - Dukuh Atas",
+    "lat": -6.233593,
+    "lng": 106.822976
+  },
+  {
+    "name": "St. Pesing",
+    "corridor": "St. Pesing - Kota",
+    "lat": -6.161726,
+    "lng": 106.77127
+  },
+  {
+    "name": "Indosiar 3",
+    "corridor": "St. Pesing - Kota",
+    "lat": -6.163492,
+    "lng": 106.77598
+  },
+  {
+    "name": "Komdak 2",
+    "corridor": "Ragunan - Balai Kota via Semanggi",
+    "lat": -6.221715,
+    "lng": 106.81426
+  },
+  {
+    "name": "Komdak 1",
+    "corridor": "Ragunan - Balai Kota via Semanggi",
+    "lat": -6.222333,
+    "lng": 106.81407
+  },
+  {
+    "name": "Indosiar 4",
+    "corridor": "Pesing - Kali Grogol",
+    "lat": -6.1631,
+    "lng": 106.774047
+  },
+  {
+    "name": "Slipi Petamburan 2",
+    "corridor": "Blok M - Kota",
+    "lat": -6.201683,
+    "lng": 106.80002
+  },
+  {
+    "name": "Benhil 2",
+    "corridor": "Blok M - Kota",
+    "lat": -6.216775,
+    "lng": 106.8154
+  },
+  {
+    "name": "Benhil 1",
+    "corridor": "Blok M - Kota",
+    "lat": -6.217304,
+    "lng": 106.8154
+  },
+  {
+    "name": "Denpasar Arah Timur",
+    "corridor": "Blok M - Kota",
+    "lat": -6.232579,
+    "lng": 106.821614
+  },
+  {
+    "name": "Denpasar Arah Barat",
+    "corridor": "Blok M - Kota",
+    "lat": -6.233536,
+    "lng": 106.822059
+  },
+  {
+    "name": "Pancoran Barat 1",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.241969,
+    "lng": 106.83791
+  },
+  {
+    "name": "Pancoran Barat 2",
+    "corridor": "Pinang Ranti - Pluit",
+    "lat": -6.241462,
+    "lng": 106.83808
+  }
+]

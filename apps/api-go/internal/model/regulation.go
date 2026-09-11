@@ -4,13 +4,15 @@ package model
 // yang disimpan di PostgreSQL beserta vector embedding-nya (pgvector).
 // TODO: sesuaikan field dengan schema tabel regulations di database
 type RegulationDocument struct {
-	ID        int64     `json:"id"`
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`
-	Source    string    `json:"source"`    // asal dokumen (perda, permen, dll)
-	Region    string    `json:"region"`    // kode wilayah
-	CreatedAt string    `json:"created_at"`
-	// Embedding []float32 // tidak di-expose ke JSON; dipakai internal pgvector
+	ID         int64   `json:"id"`
+	Title      string  `json:"title"`
+	Category   string  `json:"category,omitempty"`
+	Section    string  `json:"section,omitempty"`
+	Content    string  `json:"content"`
+	Source     string  `json:"source"`
+	Region     string  `json:"region"`
+	CreatedAt  string  `json:"created_at"`
+	Similarity float64 `json:"similarity,omitempty"`
 }
 
 // RAGSearchRequest adalah request body untuk pencarian semantik dokumen regulasi.

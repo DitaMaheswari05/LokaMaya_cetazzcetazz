@@ -80,6 +80,7 @@ export default function Navbar() {
               width={24} 
               height={24} 
               className="object-contain"
+              style={{ width: 'auto', height: 'auto' }}
             />
           </div>
           <span className="text-[16px] font-bold text-[#1A1832] tracking-tight">Lokamaya</span>

@@ -20,15 +20,15 @@ export default function Home() {
         
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-2 flex-1 justify-center">
-          <a href="#" className="px-4 py-1.5 text-[13px] font-medium text-text-gray hover:text-text-dark hover:bg-gray-100 rounded-lg transition">
+          <Link href="/" className="px-4 py-1.5 text-[13px] font-medium text-text-gray hover:text-text-dark hover:bg-gray-100 rounded-lg transition">
             Beranda
-          </a>
-          <a href="#" className="px-4 py-1.5 text-[13px] font-medium text-text-gray hover:text-text-dark hover:bg-gray-100 rounded-lg transition">
+          </Link>
+          <Link href="/peta-simulasi" className="px-4 py-1.5 text-[13px] font-medium text-text-gray hover:text-text-dark hover:bg-gray-100 rounded-lg transition">
             Peta Simulasi
-          </a>
-          <a href="#" className="px-4 py-1.5 text-[13px] font-medium text-text-gray hover:text-text-dark hover:bg-gray-100 rounded-lg transition">
+          </Link>
+          <Link href="/metodologi" className="px-4 py-1.5 text-[13px] font-medium text-text-gray hover:text-text-dark hover:bg-gray-100 rounded-lg transition">
             Metodologi
-          </a>
+          </Link>
         </div>
 
         <div className="flex-shrink-0">
@@ -64,12 +64,12 @@ export default function Home() {
             </p>
             
             <div className="flex flex-wrap gap-3 mb-12 w-full max-w-[600px]">
-              <button className="px-7 py-3 bg-accent text-white font-semibold text-sm rounded-xl shadow-[0_4px_20px_rgba(237,107,35,0.35)] hover:bg-[#d85e1b] transition">
+              <Link href="/peta-simulasi" className="px-7 py-3 bg-accent text-white font-semibold text-sm rounded-xl shadow-[0_4px_20px_rgba(237,107,35,0.35)] hover:bg-[#d85e1b] transition inline-flex items-center justify-center">
                 Mulai Simulasi
-              </button>
-              <button className="px-7 py-3 bg-white/10 text-white/80 font-medium text-sm rounded-xl border border-white/20 hover:bg-white/20 transition">
+              </Link>
+              <Link href="/metodologi" className="px-7 py-3 bg-white/10 text-white/80 font-medium text-sm rounded-xl border border-white/20 hover:bg-white/20 transition inline-flex items-center justify-center">
                 Lihat Metodologi
-              </button>
+              </Link>
             </div>
             
             {/* Stats */}

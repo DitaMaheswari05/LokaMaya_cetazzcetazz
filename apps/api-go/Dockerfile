@@ -1,7 +1,5 @@
-# syntax=docker/dockerfile:1
-
 # ─── Stage 1: Build ───────────────────────────────────────────────────────────
-FROM golang:1.23-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
@@ -10,10 +8,14 @@ ENV GOTOOLCHAIN=auto
 # Install git untuk go mod download & tidy
 RUN apk add --no-cache git
 
+# Copy file dependensi terlebih dahulu agar di-cache oleh Docker
+COPY go.mod go.sum ./
+RUN go mod download
+
 # Copy seluruh source code
 COPY . .
 
-# Pastikan go.sum lengkap dan download semua dependency
+# Pastikan checksum go.sum tersinkronisasi
 RUN go mod tidy
 
 # Build binary statik — CGO_ENABLED=0 agar tidak butuh libc di runtime

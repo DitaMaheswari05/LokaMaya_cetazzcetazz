@@ -16,15 +16,29 @@ litellm_settings:
 model_list:
   - model_name: routing-llm
     litellm_params:
-      model: gemini/gemini-1.5-flash
+      model: gemini/gemini-flash-lite-latest
       api_key: "os.environ/GEMINI_API_KEY"
-      rpm: 1000
-      tpm: 1000000
-      timeout: 30
+      rpm: 2000
+      tpm: 2000000
+      timeout: 10
+  - model_name: gemini-flash-latest
+    litellm_params:
+      model: gemini/gemini-flash-lite-latest
+      api_key: "os.environ/GEMINI_API_KEY"
+      rpm: 2000
+      tpm: 2000000
+      timeout: 10
+  - model_name: gemini-flash-lite-latest
+    litellm_params:
+      model: gemini/gemini-flash-lite-latest
+      api_key: "os.environ/GEMINI_API_KEY"
+      rpm: 2000
+      tpm: 2000000
+      timeout: 10
   - model_name: gemini-1.5-flash
     litellm_params:
-      model: gemini/gemini-1.5-flash
+      model: gemini/gemini-flash-lite-latest
       api_key: "os.environ/GEMINI_API_KEY"
-      rpm: 1000
-      tpm: 1000000
-      timeout: 30
+      rpm: 2000
+      tpm: 2000000
+      timeout: 10

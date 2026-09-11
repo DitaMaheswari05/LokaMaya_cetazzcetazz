@@ -187,6 +187,7 @@ export default function LoginPage() {
                 width={32} 
                 height={32} 
                 className="object-contain"
+                style={{ width: 'auto', height: 'auto' }}
               />
               <span className="text-[20px] font-bold text-primary tracking-tight">Lokamaya</span>
             </div>

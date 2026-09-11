@@ -17,6 +17,7 @@ type Config struct {
 	AIServiceURL  string // URL ke Python ai-service (:8001)
 	LiteLLMURL    string // URL ke LiteLLM proxy (:4000)
 	LiteLLMAPIKey string
+	GeminiAPIKey  string
 	MapIDAPIKey   string
 
 	// Auth & Security
@@ -41,10 +42,11 @@ func Load() *Config {
 		Port:           getEnv("GO_API_PORT", "8080"),
 		DatabaseURL:    getEnv("DATABASE_URL", ""),
 		RedisURL:       getEnv("REDIS_URL", ""),
-		OSRMURL:        getEnv("OSRM_URL", "http://osrm:5000"),
+		OSRMURL:        getEnv("OSRM_URL", "https://router.project-osrm.org"),
 		AIServiceURL:   getEnv("AI_SERVICE_URL", "http://ai-service:8001"),
 		LiteLLMURL:     getEnv("LITELLM_URL", "http://litellm:4000"),
 		LiteLLMAPIKey:  getEnv("LITELLM_API_KEY", ""),
+		GeminiAPIKey:   getEnv("GEMINI_API_KEY", getEnv("GOOGLE_AI_STUDIO_API_KEY", "")),
 		MapIDAPIKey:    getEnv("NEXT_PUBLIC_MAPID_API_KEY", ""),
 		JWTSecret:      jwtSecret,
 		JWTExpiryHours: jwtExpiry,

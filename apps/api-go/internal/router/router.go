@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"lokamaya/api-go/internal/handler"
+	"lokamaya/api-go/internal/mcp"
 	"lokamaya/api-go/internal/middleware"
 	"lokamaya/api-go/internal/service"
 
@@ -21,6 +22,7 @@ func New(
 	communityH *handler.CommunityHandler,
 	authH *handler.AuthHandler,
 	chatH *handler.ChatHandler,
+	mcpServer *mcp.Server,
 	authSvc service.AuthService,
 ) http.Handler {
 	r := chi.NewRouter()
@@ -31,6 +33,12 @@ func New(
 
 	r.Get("/health", healthH.Health)
 	r.Get("/readyz", healthH.Ready)
+
+	// MCP (Model Context Protocol) Server endpoints (Anthropic SSE transport)
+	r.Route("/mcp", func(r chi.Router) {
+		r.Get("/sse", mcpServer.HandleSSE)
+		r.Post("/messages", mcpServer.HandleMessages)
+	})
 
 	r.Route("/api/v1", func(r chi.Router) {
 
@@ -48,17 +56,22 @@ func New(
 			r.Get("/features", mapH.GetFeatures)
 		})
 
-		// Analysis — analisis spasial dan simulasi perubahan halte
+		// Analysis — analisis spasial, simulasi halte, dan AI Urban Council
 		r.Route("/analysis", func(r chi.Router) {
 			r.Post("/simulate", analysisH.Simulate)
 			r.Post("/compare", analysisH.Compare)
 			r.Post("/spatial", analysisH.RunSpatialAnalysis)
 			r.Post("/accessibility", analysisH.GetAccessibilityScore)
+			r.Post("/deliberate", analysisH.Deliberate)
+			r.Post("/optimal", analysisH.FindOptimal)
+			r.Post("/policy-brief", analysisH.PolicyBrief)
+			r.Post("/od-trip", analysisH.AnalyzeODTrip)
 		})
 
-		// Chat — AI Chatbot Assistant dengan Agentic Tool Calling
+		// Chat — AI Chatbot Assistant dengan Agentic Tool Calling & Real-Time Streaming (SSE)
 		r.Route("/chat", func(r chi.Router) {
 			r.Post("/", chatH.Chat)
+			r.Post("/stream", chatH.ChatStream)
 		})
 
 		// Routing — isochrone dan route via OSRM

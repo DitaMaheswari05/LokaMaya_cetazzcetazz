@@ -15,15 +15,19 @@ type ChatMessageItem struct {
 
 // ChatRequest adalah request body dari frontend untuk AI Chatbot.
 type ChatRequest struct {
-	Message         string            `json:"message"`
-	ContextLocation *ContextLocation  `json:"context_location,omitempty"`
-	History         []ChatMessageItem `json:"history,omitempty"`
+	Message             string            `json:"message"`
+	ContextLocation     *ContextLocation  `json:"context_location,omitempty"`
+	OriginLocation      *ODLocation       `json:"origin_location,omitempty"`
+	DestinationLocation *ODLocation       `json:"destination_location,omitempty"`
+	History             []ChatMessageItem `json:"history,omitempty"`
 }
 
 // ChatResponse adalah respons dari AI Chatbot ke pengguna.
 type ChatResponse struct {
-	Message             string            `json:"message"`
-	TriggeredSimulation *SimulationResult `json:"triggered_simulation,omitempty"`
-	ToolExecuted        string            `json:"tool_executed,omitempty"`
-	SuggestedQuestions  []string          `json:"suggested_questions,omitempty"`
+	Message             string                `json:"message"`
+	TriggeredSimulation *SimulationResult     `json:"triggered_simulation,omitempty"`
+	TriggeredODTrip     *ODTripAnalysisResult `json:"triggered_od_trip,omitempty"`
+	ActiveLayerToggle   string                `json:"active_layer_toggle,omitempty"`
+	ToolExecuted        string                `json:"tool_executed,omitempty"`
+	SuggestedQuestions  []string              `json:"suggested_questions,omitempty"`
 }

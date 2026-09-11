@@ -6,6 +6,90 @@ export interface ContextLocation {
   stop_name?: string;
 }
 
+export interface ODLocation {
+  latitude: number;
+  longitude: number;
+  name?: string;
+}
+
+export interface ODStopReference {
+  id: string;
+  name: string;
+  distance_meters: number;
+  walk_minutes: number;
+  corridor: string;
+  routes: string[];
+  latitude: number;
+  longitude: number;
+  is_brt: boolean;
+}
+
+export interface BottleneckDetail {
+  severity: 'Kritis' | 'Sedang' | 'Ringan' | string;
+  friction_score: number;
+  first_mile_gap_meters: number;
+  last_mile_gap_meters: number;
+  requires_transfer: boolean;
+  transfer_count: number;
+  flood_risk_detected: boolean;
+  summary: string;
+  key_issues: string[];
+}
+
+export interface ProposedStopRecommendation {
+  action: 'tambah' | 'pindah' | string;
+  stop_name: string;
+  latitude: number;
+  longitude: number;
+  corridor: string;
+  distance_to_origin_meters: number;
+  distance_to_destination_meters: number;
+  rationale: string;
+  estimated_reach_population: number;
+}
+
+export interface JourneyStep {
+  step_number: number;
+  mode: 'walk' | 'bus' | 'transfer' | string;
+  title: string;
+  description: string;
+  distance_meters: number;
+  duration_minutes: number;
+  icon?: string;
+}
+
+export interface JourneySimulation {
+  total_duration_minutes: number;
+  total_walk_distance_meters: number;
+  total_transit_time_minutes: number;
+  transit_rides_count: number;
+  pedestrian_strain_level: string;
+  comfort_rating: number;
+  steps: JourneyStep[];
+}
+
+export interface ODTripAnalysisResult {
+  origin: ODLocation;
+  destination: ODLocation;
+  direct_distance_meters: number;
+  nearest_origin_stop: ODStopReference;
+  nearest_destination_stop: ODStopReference;
+  bottleneck: BottleneckDetail;
+  proposed_stop: ProposedStopRecommendation;
+  as_is_journey: JourneySimulation;
+  to_be_journey: JourneySimulation;
+  delta_travel_time_minutes: number;
+  delta_walk_distance_meters: number;
+  efficiency_gain_percent: number;
+  ai_narrative: string;
+  route_geojson?: any;
+}
+
+export interface ODTripRequest {
+  origin: ODLocation;
+  destination: ODLocation;
+}
+
 export interface ChatMessageItem {
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -14,6 +98,8 @@ export interface ChatMessageItem {
 export interface ChatRequest {
   message: string;
   context_location?: ContextLocation;
+  origin_location?: ODLocation;
+  destination_location?: ODLocation;
   history?: ChatMessageItem[];
 }
 
@@ -47,6 +133,31 @@ export interface RouteConnectivityDetail {
   total_affected: number;
 }
 
+export interface RouteStopItem {
+  sequence: number;
+  name: string;
+  status: 'existing' | 'added' | 'removed' | 'relocated';
+  is_simulated: boolean;
+  latitude: number;
+  longitude: number;
+}
+
+export interface RouteComparisonDetail {
+  primary_route_code: string;
+  primary_route_name: string;
+  affected_corridor: string;
+  direction: string;
+  as_is_stops: RouteStopItem[];
+  to_be_stops: RouteStopItem[];
+  changed_segment: string;
+  all_affected_routes: string[];
+  delta_distance_meters: number;
+  delta_travel_time_minutes: number;
+  summary: string;
+  as_is_geojson: any;
+  to_be_geojson: any;
+}
+
 export interface QualitativeContext {
   has_survey_data: boolean;
   nearest_survey_point?: string;
@@ -54,6 +165,29 @@ export interface QualitativeContext {
   field_notes?: string;
   pain_points?: string;
   potentials?: string;
+}
+
+export interface StakeholderOpinion {
+  persona: string;
+  role: string;
+  stance: string;
+  quote: string;
+  key_reason: string;
+}
+
+export interface DeliberationResult {
+  simulation_id: string;
+  social_acceptance_rate: number;
+  consensus_level: 'Tinggi' | 'Sedang' | 'Rendah' | string;
+  stakeholders: StakeholderOpinion[];
+  compromise_solution: string;
+}
+
+export interface BehavioralRippleDetail {
+  modal_shift_ojol_percent: number;
+  walk_commuter_impact: string;
+  informal_vendor_turnover: string;
+  summary: string;
 }
 
 export interface SimulationResult {
@@ -66,9 +200,28 @@ export interface SimulationResult {
   umkm_economic: UMKMScoreDetail;
   site_feasibility: FeasibilityDetail;
   route_connectivity: RouteConnectivityDetail;
+  route_comparison?: RouteComparisonDetail;
+  deliberation?: DeliberationResult;
+  behavioral_ripple?: BehavioralRippleDetail;
+  policy_brief?: string;
   qualitative_context: QualitativeContext;
   ai_narrative: string;
   created_at: string;
+}
+
+export interface OptimalStopCandidate {
+  rank: number;
+  title: string;
+  latitude: number;
+  longitude: number;
+  simulation_result: SimulationResult;
+  reason: string;
+}
+
+export interface OptimalSearchResponse {
+  corridor_name: string;
+  total_sampled: number;
+  top_candidates: OptimalStopCandidate[];
 }
 
 export interface SimulateRequest {
@@ -94,6 +247,8 @@ export interface CompareResult {
 export interface ChatResponse {
   message: string;
   triggered_simulation?: SimulationResult;
+  triggered_od_trip?: ODTripAnalysisResult;
+  active_layer_toggle?: string;
   tool_executed?: string;
   suggested_questions?: string[];
 }

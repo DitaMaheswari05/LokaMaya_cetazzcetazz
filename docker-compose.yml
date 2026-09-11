@@ -29,6 +29,8 @@ services:
       - AI_SERVICE_URL=http://ai-service:8001
       - LITELLM_URL=http://litellm:4000
       - LITELLM_API_KEY=${LITELLM_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GOOGLE_AI_STUDIO_API_KEY=${GOOGLE_AI_STUDIO_API_KEY}
       - JWT_SECRET=${JWT_SECRET:-lokamaya-super-secret-key-change-in-production-min-32-chars}
       - JWT_EXPIRY_HOURS=${JWT_EXPIRY_HOURS:-24}
       - BCRYPT_COST=${BCRYPT_COST:-12}

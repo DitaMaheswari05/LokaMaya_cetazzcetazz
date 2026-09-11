@@ -9,19 +9,21 @@ import (
 	"time"
 )
 
-// LiteLLMClient adalah HTTP client OpenAI-compatible ke LiteLLM proxy.
+// LiteLLMClient adalah HTTP client OpenAI-compatible ke LiteLLM proxy dengan direct fallback ke Google AI Studio.
 type LiteLLMClient struct {
 	baseURL    string
 	apiKey     string
+	geminiKey  string
 	httpClient *http.Client
 }
 
-func NewLiteLLMClient(baseURL, apiKey string) *LiteLLMClient {
+func NewLiteLLMClient(baseURL, apiKey, geminiKey string) *LiteLLMClient {
 	return &LiteLLMClient{
-		baseURL: baseURL,
-		apiKey:  apiKey,
+		baseURL:   baseURL,
+		apiKey:    apiKey,
+		geminiKey: geminiKey,
 		httpClient: &http.Client{
-			Timeout: 120 * time.Second,
+			Timeout: 12 * time.Second,
 		},
 	}
 }
@@ -80,10 +82,13 @@ type ChatCompletionResponse struct {
 	} `json:"choices"`
 }
 
+// DefaultModel adalah model Gemini default aktif
+const DefaultModel = "gemini-flash-lite-latest"
+
 // Complete mengirim request percakapan standar (text completion).
 func (c *LiteLLMClient) Complete(ctx context.Context, model string, messages []ChatMessage) (string, error) {
-	if model == "" {
-		model = "gemini/gemini-1.5-flash"
+	if model == "" || model == "gemini/gemini-1.5-flash" || model == "gemini-1.5-flash" {
+		model = DefaultModel
 	}
 
 	req := ChatCompletionRequest{
@@ -93,21 +98,28 @@ func (c *LiteLLMClient) Complete(ctx context.Context, model string, messages []C
 	}
 
 	var resp ChatCompletionResponse
-	if err := c.postJSON(ctx, "/v1/chat/completions", req, &resp); err != nil {
-		return "", fmt.Errorf("litellm complete error: %w", err)
-	}
-
-	if len(resp.Choices) > 0 {
+	err := c.postJSON(ctx, "/v1/chat/completions", req, &resp)
+	if err == nil && len(resp.Choices) > 0 {
 		return resp.Choices[0].Message.Content, nil
 	}
 
+	// Direct fallback ke Google AI Studio jika LiteLLM offline atau error
+	if c.geminiKey != "" {
+		if direct, dirErr := c.callGeminiDirect(ctx, messages); dirErr == nil && direct != "" {
+			return direct, nil
+		}
+	}
+
+	if err != nil {
+		return "", fmt.Errorf("litellm complete error: %w", err)
+	}
 	return "", fmt.Errorf("tidak ada pilihan respons dari LiteLLM")
 }
 
 // ChatWithTools mengirim request percakapan dengan dukungan Tool Calling (Function Calling).
 func (c *LiteLLMClient) ChatWithTools(ctx context.Context, model string, messages []ChatMessage, tools []ToolDefinition) (*ChatMessage, error) {
-	if model == "" {
-		model = "gemini/gemini-1.5-flash"
+	if model == "" || model == "gemini/gemini-1.5-flash" || model == "gemini-1.5-flash" {
+		model = DefaultModel
 	}
 
 	req := ChatCompletionRequest{
@@ -119,14 +131,24 @@ func (c *LiteLLMClient) ChatWithTools(ctx context.Context, model string, message
 	}
 
 	var resp ChatCompletionResponse
-	if err := c.postJSON(ctx, "/v1/chat/completions", req, &resp); err != nil {
-		return nil, fmt.Errorf("litellm tools error: %w", err)
-	}
-
-	if len(resp.Choices) > 0 {
+	err := c.postJSON(ctx, "/v1/chat/completions", req, &resp)
+	if err == nil && len(resp.Choices) > 0 {
 		return &resp.Choices[0].Message, nil
 	}
 
+	// Direct fallback ke Google AI Studio jika LiteLLM offline atau error
+	if c.geminiKey != "" {
+		if direct, dirErr := c.callGeminiDirect(ctx, messages); dirErr == nil && direct != "" {
+			return &ChatMessage{
+				Role:    "assistant",
+				Content: direct,
+			}, nil
+		}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("litellm tools error: %w", err)
+	}
 	return nil, fmt.Errorf("tidak ada respons dari LiteLLM")
 }
 
@@ -199,6 +221,120 @@ func DefaultTools() []ToolDefinition {
 				},
 			},
 		},
+		{
+			Type: "function",
+			Function: FunctionDefinition{
+				Name:        "deliberate_stakeholders",
+				Description: "Jalankan simulasi musyawarah AI Urban Council (Warga Rina, Pelaku UMKM Siti, Staf Dishub Andi) untuk mengukur tingkat konsensus sosial dan solusi kompromi penataan halte.",
+				Parameters: map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"latitude": map[string]interface{}{
+							"type":        "number",
+							"description": "Latitude lokasi halte",
+						},
+						"longitude": map[string]interface{}{
+							"type":        "number",
+							"description": "Longitude lokasi halte",
+						},
+						"scenario_type": map[string]interface{}{
+							"type":        "string",
+							"enum":        []string{"tambah", "pindah", "tutup"},
+							"description": "Jenis skenario perubahan",
+						},
+						"stop_name": map[string]interface{}{
+							"type": "string",
+						},
+					},
+					"required": []string{"latitude", "longitude", "scenario_type"},
+				},
+			},
+		},
+		{
+			Type: "function",
+			Function: FunctionDefinition{
+				Name:        "find_optimal_stops",
+				Description: "Cari secara otonom 3 titik halte Pareto-optimal terbaik di sepanjang koridor jalan tertentu (Pilihan Warga, Pilihan UMKM, dan Pilihan Resilien Bebas Banjir).",
+				Parameters: map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"corridor_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Nama koridor jalan (misal: Jl. Gatot Subroto, Jl. Sudirman, Jl. Daan Mogot)",
+						},
+						"center_latitude": map[string]interface{}{
+							"type": "number",
+						},
+						"center_longitude": map[string]interface{}{
+							"type": "number",
+						},
+					},
+					"required": []string{"corridor_name"},
+				},
+			},
+		},
+		{
+			Type: "function",
+			Function: FunctionDefinition{
+				Name:        "generate_policy_brief",
+				Description: "Susun draf naskah advokasi kebijakan formal (Policy Brief) berisi dasar hukum RDTR, matriks skor spasial, hasil musyawarah, dan rekomendasi mitigasi rekayasa siap serah ke Pemprov/Dishub.",
+				Parameters: map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"latitude": map[string]interface{}{
+							"type": "number",
+						},
+						"longitude": map[string]interface{}{
+							"type": "number",
+						},
+						"stop_name": map[string]interface{}{
+							"type": "string",
+						},
+						"scenario_type": map[string]interface{}{
+							"type": "string",
+						},
+					},
+					"required": []string{"latitude", "longitude", "scenario_type"},
+				},
+			},
+		},
+		{
+			Type: "function",
+			Function: FunctionDefinition{
+				Name:        "analyze_od_trip",
+				Description: "Analisis perjalanan komuter dari Titik Asal (A) ke Titik Tujuan (B), mendeteksi bottleneck dan tingkat keparahannya, rekomendasi pembuatan atau pemindahan halte, serta simulasi komparasi pengalaman komuter To-Be vs As-Is.",
+				Parameters: map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"origin_lat": map[string]interface{}{
+							"type":        "number",
+							"description": "Latitude titik asal (Titik A)",
+						},
+						"origin_lng": map[string]interface{}{
+							"type":        "number",
+							"description": "Longitude titik asal (Titik A)",
+						},
+						"origin_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Nama lokasi atau kawasan asal (Titik A)",
+						},
+						"dest_lat": map[string]interface{}{
+							"type":        "number",
+							"description": "Latitude titik tujuan (Titik B)",
+						},
+						"dest_lng": map[string]interface{}{
+							"type":        "number",
+							"description": "Longitude titik tujuan (Titik B)",
+						},
+						"dest_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Nama lokasi atau kawasan tujuan (Titik B)",
+						},
+					},
+					"required": []string{"origin_lat", "origin_lng", "dest_lat", "dest_lng"},
+				},
+			},
+		},
 	}
 }
 
@@ -231,4 +367,102 @@ func (c *LiteLLMClient) postJSON(ctx context.Context, path string, reqBody, resp
 	}
 
 	return json.NewDecoder(resp.Body).Decode(respBody)
+}
+
+// ─── Direct Google AI Studio Gemini API Fallback ─────────────────────────────
+
+type geminiPart struct {
+	Text string `json:"text"`
+}
+
+type geminiContentItem struct {
+	Role  string       `json:"role,omitempty"`
+	Parts []geminiPart `json:"parts"`
+}
+
+type geminiDirectReq struct {
+	Contents          []geminiContentItem `json:"contents"`
+	SystemInstruction *geminiContentItem  `json:"systemInstruction,omitempty"`
+}
+
+type geminiDirectResp struct {
+	Candidates []struct {
+		Content struct {
+			Parts []struct {
+				Text string `json:"text"`
+			} `json:"parts"`
+		} `json:"content"`
+	} `json:"candidates"`
+}
+
+func (c *LiteLLMClient) callGeminiDirect(ctx context.Context, messages []ChatMessage) (string, error) {
+	if c.geminiKey == "" {
+		return "", fmt.Errorf("gemini API key is empty")
+	}
+
+	var contents []geminiContentItem
+	var sysInstruction *geminiContentItem
+
+	for _, msg := range messages {
+		if msg.Role == "system" {
+			sysInstruction = &geminiContentItem{
+				Parts: []geminiPart{{Text: msg.Content}},
+			}
+		} else {
+			role := "user"
+			if msg.Role == "assistant" {
+				role = "model"
+			}
+			if msg.Content != "" {
+				contents = append(contents, geminiContentItem{
+					Role:  role,
+					Parts: []geminiPart{{Text: msg.Content}},
+				})
+			}
+		}
+	}
+
+	if len(contents) == 0 {
+		return "", fmt.Errorf("no user/model messages to send")
+	}
+
+	body := geminiDirectReq{
+		Contents:          contents,
+		SystemInstruction: sysInstruction,
+	}
+
+	b, err := json.Marshal(body)
+	if err != nil {
+		return "", err
+	}
+
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=%s", c.geminiKey)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(b))
+	if err != nil {
+		return "", err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	httpResp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return "", err
+	}
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		var errBuf bytes.Buffer
+		_, _ = errBuf.ReadFrom(httpResp.Body)
+		return "", fmt.Errorf("gemini api error status %d: %s", httpResp.StatusCode, errBuf.String())
+	}
+
+	var gResp geminiDirectResp
+	if err := json.NewDecoder(httpResp.Body).Decode(&gResp); err != nil {
+		return "", err
+	}
+
+	if len(gResp.Candidates) > 0 && len(gResp.Candidates[0].Content.Parts) > 0 {
+		return gResp.Candidates[0].Content.Parts[0].Text, nil
+	}
+
+	return "", fmt.Errorf("empty candidates from gemini direct")
 }

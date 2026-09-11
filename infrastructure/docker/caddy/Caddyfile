@@ -1,0 +1,51 @@
+# Caddyfile untuk LokaMaya Production Reverse Proxy & Automated HTTPS
+{
+    email {$ACME_EMAIL:admin@lokamaya.id}
+}
+
+{$DOMAIN:localhost} {
+    # Gzip and Zstandard compression
+    encode gzip zstd
+
+    # Security Headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+
+    # Model Context Protocol (MCP) SSE Transport & JSON-RPC
+    handle /mcp* {
+        reverse_proxy api:8080 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            # Flush SSE immediately
+            flush_interval -1
+        }
+    }
+
+    # Go API Backend
+    handle /api/* {
+        reverse_proxy api:8080 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Health check backend
+    handle /health {
+        reverse_proxy api:8080
+    }
+
+    # Next.js Frontend
+    handle /* {
+        reverse_proxy web:3000 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+}

@@ -16,6 +16,7 @@ import (
 	"lokamaya/api-go/internal/config"
 	"lokamaya/api-go/internal/database"
 	"lokamaya/api-go/internal/handler"
+	"lokamaya/api-go/internal/mcp"
 	"lokamaya/api-go/internal/repository"
 	"lokamaya/api-go/internal/router"
 	"lokamaya/api-go/internal/service"
@@ -49,29 +50,34 @@ func main() {
 
 	// ─── Clients (HTTP clients ke service eksternal)
 	osrmCli := client.NewOSRMClient(cfg.OSRMURL)
-	_ = client.NewAIClient(cfg.AIServiceURL)
-	litellmCli := client.NewLiteLLMClient(cfg.LiteLLMURL, cfg.LiteLLMAPIKey)
+	aiCli := client.NewAIClient(cfg.AIServiceURL)
+	litellmCli := client.NewLiteLLMClient(cfg.LiteLLMURL, cfg.LiteLLMAPIKey, cfg.GeminiAPIKey)
 
 	// ─── Repositories
 	userRepo := repository.NewUserRepository(db)
-	spatialRepo := repository.NewSpatialRepository(db)
+	spatialRepo := repository.NewSpatialRepository(db, osrmCli)
+	regulationRepo := repository.NewRegulationRepository(db)
 
 	// ─── Services
 	authSvc := service.NewAuthService(userRepo, redisClient, cfg)
 	analysisSvc := service.NewAnalysisService(spatialRepo, litellmCli, osrmCli)
 	chatSvc := service.NewChatService(litellmCli, analysisSvc)
+	ragSvc := service.NewRAGService(regulationRepo, aiCli, litellmCli)
 
 	// ─── Handlers
 	healthH := handler.NewHealthHandler()
 	mapH := handler.NewMapHandler(spatialRepo)
 	analysisH := handler.NewAnalysisHandler(analysisSvc)
 	routingH := handler.NewRoutingHandler(spatialRepo)
-	regulationsH := handler.NewRegulationsHandler()
+	regulationsH := handler.NewRegulationsHandler(ragSvc)
 	communityH := handler.NewCommunityHandler()
 	authH := handler.NewAuthHandler(authSvc)
 	chatH := handler.NewChatHandler(chatSvc)
 
-	r := router.New(healthH, mapH, analysisH, routingH, regulationsH, communityH, authH, chatH, authSvc)
+	// ─── MCP Server
+	mcpServer := mcp.NewServer(analysisSvc, chatSvc, spatialRepo)
+
+	r := router.New(healthH, mapH, analysisH, routingH, regulationsH, communityH, authH, chatH, mcpServer, authSvc)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.Port),
