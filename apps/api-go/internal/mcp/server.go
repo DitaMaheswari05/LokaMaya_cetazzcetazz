@@ -306,6 +306,32 @@ func (s *Server) getToolDefinitions() []map[string]interface{} {
 				"required": []string{"latitude", "longitude", "scenario_type"},
 			},
 		},
+		{
+			"name":        "get_nearby_stops",
+			"description": "Ambil top-N halte TransJakarta terdekat dari titik koordinat (latitude, longitude) di DKI Jakarta beserta jarak fisik, estimasi waktu jalan kaki, dan jumlah rute yang melintas.",
+			"inputSchema": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"latitude":      map[string]interface{}{"type": "number", "description": "Koordinat lintang (latitude), contoh: -6.2146"},
+					"longitude":     map[string]interface{}{"type": "number", "description": "Koordinat bujur (longitude), contoh: 106.8239"},
+					"limit":         map[string]interface{}{"type": "integer", "description": "Jumlah halte maksimal yang ingin diambil (default: 5, maksimal: 20)"},
+					"radius_meters": map[string]interface{}{"type": "number", "description": "Radius pencarian maksimal dalam meter (default: 1000m)"},
+					"filter_type":   map[string]interface{}{"type": "string", "enum": []string{"all", "brt", "feeder"}, "description": "Filter halte: 'all', 'brt' (halte koridor utama barrier), atau 'feeder' (non-BRT/Mikrotrans)"},
+				},
+				"required": []string{"latitude", "longitude"},
+			},
+		},
+		{
+			"name":        "get_stop_details",
+			"description": "Lihat detail komprehensif suatu halte TransJakarta berdasarkan ID halte (misal: 'TJ-01-14') atau nama halte (misal: 'Karet Sudirman', 'Dukuh Atas'), mencakup rute bus/feeder apa saja yang melintas, integrasi antarmoda (MRT/KRL/LRT), dan zonasi RDTR sekitarnya.",
+			"inputSchema": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"stop_id":   map[string]interface{}{"type": "string", "description": "ID unik halte TransJakarta (misal: 'TJ-01-14')"},
+					"stop_name": map[string]interface{}{"type": "string", "description": "Nama halte untuk pencarian berbasis teks (misal: 'Karet Sudirman', 'Tosari', 'Dukuh Atas')"},
+				},
+			},
+		},
 	}
 }
 
@@ -435,6 +461,52 @@ func (s *Server) callTool(ctx context.Context, params json.RawMessage) (map[stri
 		return map[string]interface{}{
 			"content": []map[string]string{
 				{"type": "text", "text": brief},
+			},
+		}, nil
+
+	case "get_nearby_stops":
+		lat := getFloat(callParams.Arguments, "latitude")
+		lng := getFloat(callParams.Arguments, "longitude")
+		limit := 5
+		if v, ok := callParams.Arguments["limit"]; ok {
+			if f, ok := v.(float64); ok && f > 0 {
+				limit = int(f)
+			}
+		}
+		radius := 1000.0
+		if v, ok := callParams.Arguments["radius_meters"]; ok {
+			if f, ok := v.(float64); ok && f > 0 {
+				radius = f
+			}
+		}
+		filterType := getString(callParams.Arguments, "filter_type")
+		if filterType == "" {
+			filterType = "all"
+		}
+
+		res, err := s.spatialRepo.GetNearbyStops(ctx, lat, lng, limit, radius, filterType)
+		if err != nil {
+			return nil, err
+		}
+		b, _ := json.Marshal(res)
+		return map[string]interface{}{
+			"content": []map[string]string{
+				{"type": "text", "text": string(b)},
+			},
+		}, nil
+
+	case "get_stop_details":
+		stopID := getString(callParams.Arguments, "stop_id")
+		stopName := getString(callParams.Arguments, "stop_name")
+
+		res, err := s.spatialRepo.GetStopDetails(ctx, stopID, stopName)
+		if err != nil {
+			return nil, err
+		}
+		b, _ := json.Marshal(res)
+		return map[string]interface{}{
+			"content": []map[string]string{
+				{"type": "text", "text": string(b)},
 			},
 		}, nil
 
