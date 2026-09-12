@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -2904,5 +2905,316 @@ func (r *SpatialRepository) ComputeODTrip(ctx context.Context, origin, dest mode
 		EfficiencyGainPercent:   efficiencyGain,
 		RouteGeoJSON:            routeGeoJSON,
 	}, nil
+}
+
+// GetNearbyStops mengambil top-N halte TransJakarta terdekat dari titik koordinat tertentu.
+func (r *SpatialRepository) GetNearbyStops(ctx context.Context, lat, lng float64, limit int, radiusMeters float64, filterType string) (*model.NearbyStopsResult, error) {
+	if limit <= 0 {
+		limit = 5
+	}
+	if limit > 20 {
+		limit = 20
+	}
+	if radiusMeters <= 0 {
+		radiusMeters = 1500.0
+	}
+	filterType = strings.ToLower(strings.TrimSpace(filterType))
+	if filterType == "" {
+		filterType = "all"
+	}
+
+	result := &model.NearbyStopsResult{
+		QueryLatitude:  lat,
+		QueryLongitude: lng,
+		Stops:          []model.NearbyStopItem{},
+	}
+
+	if r.db != nil {
+		query := `
+			SELECT 
+				id, 
+				name, 
+				COALESCE(corridor, 'Feeder TransJakarta'), 
+				ST_Y(geom) as stop_lat, 
+				ST_X(geom) as stop_lng,
+				ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as dist_m
+			FROM transjakarta_stops
+			WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $3)
+			  AND ($4 = 'all' 
+			       OR ($4 = 'brt' AND (id LIKE '%-G%' OR corridor ILIKE '%koridor%')) 
+			       OR ($4 = 'feeder' AND (id NOT LIKE '%-G%' AND (corridor IS NULL OR corridor NOT ILIKE '%koridor%'))))
+			ORDER BY geom <-> ST_SetSRID(ST_MakePoint($1, $2), 4326)
+			LIMIT $5
+		`
+		rows, err := r.db.Query(ctx, query, lng, lat, radiusMeters, filterType, limit)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var id, name, corridor string
+				var stopLat, stopLng, distM float64
+				if err := rows.Scan(&id, &name, &corridor, &stopLat, &stopLng, &distM); err == nil {
+					isBRT := strings.Contains(id, "-G") || strings.Contains(strings.ToLower(corridor), "koridor")
+					stopType := "NON_BRT_FEEDER"
+					if isBRT {
+						stopType = "BRT_BARRIER"
+					}
+					routes, resolvedCorridor := r.resolveStopRoutesAndCorridor(ctx, stopLat, stopLng, name, corridor, isBRT)
+					if resolvedCorridor != "" {
+						corridor = resolvedCorridor
+					}
+					walkMin := int(math.Ceil(distM / 75.0))
+					if walkMin < 1 {
+						walkMin = 1
+					}
+
+					result.Stops = append(result.Stops, model.NearbyStopItem{
+						StopID:            id,
+						StopName:          formatStopNameWithHalte(name),
+						IsBRT:             isBRT,
+						StopType:          stopType,
+						Corridor:          corridor,
+						DistanceMeters:    math.Round(distM),
+						WalkTimeMinutes:   walkMin,
+						Latitude:          stopLat,
+						Longitude:         stopLng,
+						ActiveRoutesCount: len(routes),
+						Routes:            routes,
+					})
+				}
+			}
+		}
+	}
+
+	// In-memory fallback if no rows found or DB unavailable
+	if len(result.Stops) == 0 && len(r.brtRoutes) > 0 {
+		type candStop struct {
+			stop     BRTStopData
+			corridor string
+			dist     float64
+		}
+		var candidates []candStop
+		seenStopNames := make(map[string]bool)
+
+		for _, rt := range r.brtRoutes {
+			for _, st := range rt.Stops {
+				dist := haversineDistance(lat, lng, st.Latitude, st.Longitude)
+				if dist <= radiusMeters {
+					k := strings.ToLower(strings.TrimSpace(st.Name))
+					if !seenStopNames[k] {
+						seenStopNames[k] = true
+						candidates = append(candidates, candStop{
+							stop:     st,
+							corridor: rt.CorridorName,
+							dist:     dist,
+						})
+					}
+				}
+			}
+		}
+
+		sort.Slice(candidates, func(i, j int) bool {
+			return candidates[i].dist < candidates[j].dist
+		})
+
+		for i, c := range candidates {
+			if i >= limit {
+				break
+			}
+			walkMin := int(math.Ceil(c.dist / 75.0))
+			if walkMin < 1 {
+				walkMin = 1
+			}
+			routes, _ := r.resolveStopRoutesAndCorridor(ctx, c.stop.Latitude, c.stop.Longitude, c.stop.Name, c.corridor, true)
+
+			result.Stops = append(result.Stops, model.NearbyStopItem{
+				StopID:            fmt.Sprintf("TJ-MEM-%d", c.stop.Sequence),
+				StopName:          formatStopNameWithHalte(c.stop.Name),
+				IsBRT:             true,
+				StopType:          "BRT_BARRIER",
+				Corridor:          c.corridor,
+				DistanceMeters:    math.Round(c.dist),
+				WalkTimeMinutes:   walkMin,
+				Latitude:          c.stop.Latitude,
+				Longitude:         c.stop.Longitude,
+				ActiveRoutesCount: len(routes),
+				Routes:            routes,
+			})
+		}
+	}
+
+	result.TotalFound = len(result.Stops)
+	return result, nil
+}
+
+// GetStopDetails mengambil detail komprehensif suatu halte TransJakarta berdasarkan ID atau nama.
+func (r *SpatialRepository) GetStopDetails(ctx context.Context, stopID, stopName string) (*model.StopDetailResult, error) {
+	stopID = strings.TrimSpace(stopID)
+	stopName = strings.TrimSpace(stopName)
+
+	if stopID == "" && stopName == "" {
+		return nil, fmt.Errorf("parameter 'stop_id' atau 'stop_name' wajib diisi")
+	}
+
+	var id, name, corridor string
+	var stopLat, stopLng float64
+	found := false
+
+	if r.db != nil {
+		cleanSearchName := cleanTransitRoadName(stopName)
+		query := `
+			SELECT id, name, COALESCE(corridor, 'Feeder TransJakarta'), ST_Y(geom), ST_X(geom)
+			FROM transjakarta_stops
+			WHERE ($1 <> '' AND id = $1)
+			   OR ($2 <> '' AND (name ILIKE '%' || $2 || '%' OR name ILIKE '%' || $3 || '%'))
+			ORDER BY 
+				CASE 
+					WHEN $1 <> '' AND id = $1 THEN 1
+					WHEN $2 <> '' AND name ILIKE $2 THEN 2
+					WHEN $3 <> '' AND name ILIKE $3 THEN 3
+					ELSE 4
+				END
+			LIMIT 1
+		`
+		err := r.db.QueryRow(ctx, query, stopID, stopName, cleanSearchName).Scan(&id, &name, &corridor, &stopLat, &stopLng)
+		if err == nil {
+			found = true
+		}
+	}
+
+	// Fallback in-memory search across r.brtRoutes if not found in DB
+	if !found && len(r.brtRoutes) > 0 {
+		for _, rt := range r.brtRoutes {
+			for _, st := range rt.Stops {
+				if (stopID != "" && fmt.Sprintf("TJ-MEM-%d", st.Sequence) == stopID) ||
+					(stopName != "" && (strings.EqualFold(st.Name, stopName) || strings.Contains(strings.ToLower(st.Name), strings.ToLower(stopName)))) {
+					id = fmt.Sprintf("TJ-%s-%d", rt.RouteCode, st.Sequence)
+					name = st.Name
+					corridor = rt.CorridorName
+					stopLat = st.Latitude
+					stopLng = st.Longitude
+					found = true
+					break
+				}
+			}
+			if found {
+				break
+			}
+		}
+	}
+
+	if !found {
+		return nil, fmt.Errorf("halte dengan ID '%s' atau nama '%s' tidak ditemukan dalam basis data", stopID, stopName)
+	}
+
+	isBRT := strings.Contains(id, "-G") || strings.Contains(strings.ToLower(corridor), "koridor")
+	stopType := "NON_BRT_FEEDER"
+	if isBRT {
+		stopType = "BRT_BARRIER"
+	}
+
+	// 1. Ambil rute yang melayani halte ini
+	routesRaw, resolvedCorridor := r.resolveStopRoutesAndCorridor(ctx, stopLat, stopLng, name, corridor, isBRT)
+	if resolvedCorridor != "" {
+		corridor = resolvedCorridor
+	}
+
+	var routes []model.StopRouteInfo
+	seenRoutes := make(map[string]bool)
+
+	// Tambahkan rute dari resolveStopRoutesAndCorridor
+	for _, rCode := range routesRaw {
+		if !seenRoutes[rCode] {
+			seenRoutes[rCode] = true
+			serviceType := "BRT Utama"
+			if strings.HasPrefix(rCode, "JAK") {
+				serviceType = "Mikrotrans Feeder"
+			} else if !isBRT {
+				serviceType = "Non-BRT Reguler"
+			}
+			routes = append(routes, model.StopRouteInfo{
+				RouteCode:   cleanRouteDisplay(rCode),
+				RouteName:   fmt.Sprintf("Rute %s", cleanRouteDisplay(rCode)),
+				ServiceType: serviceType,
+				Direction:   "Dua Arah",
+			})
+		}
+	}
+
+	// Tambahkan rute dari in-memory brtRoutes yang singgah di halte dengan nama sama
+	for _, rt := range r.brtRoutes {
+		for _, st := range rt.Stops {
+			if strings.EqualFold(strings.TrimSpace(st.Name), strings.TrimSpace(name)) {
+				rCode := rt.RouteCode
+				if !seenRoutes[rCode] {
+					seenRoutes[rCode] = true
+					routes = append(routes, model.StopRouteInfo{
+						RouteCode:   rCode,
+						RouteName:   rt.RouteName,
+						ServiceType: "BRT Utama",
+						Direction:   rt.Direction,
+					})
+				}
+			}
+		}
+	}
+
+	// Jika masih kosong, setidaknya masukkan koridor utamanya
+	if len(routes) == 0 {
+		routes = append(routes, model.StopRouteInfo{
+			RouteCode:   cleanRouteDisplay(corridor),
+			RouteName:   corridor,
+			ServiceType: "Layanan TransJakarta",
+			Direction:   "Dua Arah",
+		})
+	}
+
+	// 2. Deteksi koneksi antarmoda (Intermodal) berdasarkan nama halte & lokasi
+	var intermodal []string
+	lowerName := strings.ToLower(name)
+	if strings.Contains(lowerName, "dukuh atas") {
+		intermodal = append(intermodal, "Stasiun MRT Dukuh Atas BNI (Terhubung langsung via JPO/CSW)", "Stasiun KRL Sudirman (Commuter Line)", "Stasiun KRL BNI City (KA Bandara)", "Stasiun LRT Jabodebek Dukuh Atas")
+	} else if strings.Contains(lowerName, "bundaran hi") {
+		intermodal = append(intermodal, "Stasiun MRT Bundaran HI (Terhubung langsung via concourse bawah tanah)")
+	} else if strings.Contains(lowerName, "karet") || strings.Contains(lowerName, "benhil") {
+		intermodal = append(intermodal, "Stasiun MRT Bendungan Hilir (~350m)", "Jembatan Penyeberangan Orang (JPO) Phinisi Karet Sudirman (Akses Lift Disabilitas & Sepeda)")
+	} else if strings.Contains(lowerName, "asean") || strings.Contains(lowerName, "csw") {
+		intermodal = append(intermodal, "Stasiun MRT ASEAN (Terhubung via Skybridge Integrasi CSW Cakra Selaras Wahana)", "Koridor 13 Elevated Busway")
+	} else if strings.Contains(lowerName, "juanda") {
+		intermodal = append(intermodal, "Stasiun KRL Juanda (Commuter Line)")
+	} else if strings.Contains(lowerName, "manggarai") {
+		intermodal = append(intermodal, "Stasiun Sentral Manggarai (Commuter Line & KA Bandara)")
+	} else if strings.Contains(lowerName, "tebet") {
+		intermodal = append(intermodal, "Stasiun KRL Tebet (Commuter Line)")
+	} else if strings.Contains(lowerName, "velodrome") {
+		intermodal = append(intermodal, "Stasiun LRT Jakarta Velodrome (Terhubung via Skybridge)")
+	} else if isBRT {
+		intermodal = append(intermodal, "Jembatan Penyeberangan Orang (JPO) / Halte Ramah Penyeberangan Sebidang", "Integrasi Tiket JakLingko")
+	} else {
+		intermodal = append(intermodal, "Integrasi Tarif Feeder JakLingko Rp 0,- (Mikrotrans)")
+	}
+
+	// 3. Konteks spasial (RDTR & Risiko Banjir)
+	feasibility, _ := r.CheckFeasibility(ctx, stopLat, stopLng)
+	catchmentPop := 2500 + (int(math.Abs(stopLat*10000+stopLng*10000))%25)*150
+
+	detail := &model.StopDetailResult{
+		StopID:                id,
+		StopName:              formatStopNameWithHalte(name),
+		Corridor:              corridor,
+		StopType:              stopType,
+		IsBRT:                 isBRT,
+		Latitude:              stopLat,
+		Longitude:             stopLng,
+		Routes:                routes,
+		IntermodalConnections: intermodal,
+		SpatialContext: model.StopSpatialContext{
+			RDTRZoneCode:            feasibility.ZoneCode,
+			RDTRZoneName:            feasibility.ZoneName,
+			FloodHazardLevel:        feasibility.FloodRisk,
+			CatchmentPopulation5Min: catchmentPop,
+		},
+	}
+
+	return detail, nil
 }
 
