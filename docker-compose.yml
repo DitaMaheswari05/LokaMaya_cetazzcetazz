@@ -4,6 +4,9 @@ services:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_MAPID_API_KEY=${NEXT_PUBLIC_MAPID_API_KEY}
     ports:
       - "3000:3000"
     environment:
