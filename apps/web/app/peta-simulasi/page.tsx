@@ -10,7 +10,7 @@ import { RouteComparisonCard } from '@/components/RouteComparisonCard';
 import { UrbanCouncilCard } from '@/components/UrbanCouncilCard';
 import { PolicyBriefModal } from '@/components/PolicyBriefModal';
 import { BehavioralRippleCard } from '@/components/BehavioralRippleCard';
-import { Search, Menu, Loader2, MapPin, Sparkles, X, CheckCircle, AlertTriangle, FileText, Compass, Users, Activity, Sparkle, Minus, ChevronUp, Bus, Filter, Layers, ArrowRightLeft, Navigation, Zap } from 'lucide-react';
+import { Search, Menu, Loader2, MapPin, Sparkles, X, CheckCircle, AlertTriangle, FileText, Compass, Users, Activity, Sparkle, Minus, ChevronUp, Bus, Filter, Layers, ArrowRightLeft, Navigation, Zap, BarChart3, CheckCircle2, Footprints, Clock, ArrowRight, RotateCcw } from 'lucide-react';
 
 const MapComponent = dynamic(() => import('@/components/Map'), {
   ssr: false,
@@ -35,6 +35,8 @@ export default function PetaSimulasiPage() {
   const [originLocation, setOriginLocation] = useState<ODLocation | null>(null);
   const [destinationLocation, setDestinationLocation] = useState<ODLocation | null>(null);
   const [odTripResult, setOdTripResult] = useState<ODTripAnalysisResult | null>(null);
+  const [isOdTripMinimized, setIsOdTripMinimized] = useState(false);
+  const [odTripStepTab, setOdTripStepTab] = useState<'as_is' | 'to_be'>('as_is');
   const [isAnalyzingOD, setIsAnalyzingOD] = useState(false);
   const [tripPickTarget, setTripPickTarget] = useState<'origin' | 'destination' | null>(null);
   const [activeLayers, setActiveLayers] = useState<Record<string, boolean>>(() => {
@@ -44,8 +46,22 @@ export default function PetaSimulasiPage() {
   });
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [targetLocation, setTargetLocation] = useState<{ latitude: number; longitude: number; zoom?: number; pitch?: number; bearing?: number } | null>(null);
+  const [targetLocation, setTargetLocation] = useState<{ latitude: number; longitude: number; zoom?: number; pitch?: number; bearing?: number; bounds?: [[number, number], [number, number]] } | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  // Auto-focus camera on the bounding box of Origin and Destination route
+  const focusCameraOnOD = (od: ODTripAnalysisResult) => {
+    if (!od.origin || !od.destination) return;
+    const minLng = Math.min(od.origin.longitude, od.destination.longitude);
+    const maxLng = Math.max(od.origin.longitude, od.destination.longitude);
+    const minLat = Math.min(od.origin.latitude, od.destination.latitude);
+    const maxLat = Math.max(od.origin.latitude, od.destination.latitude);
+    setTargetLocation({
+      latitude: (minLat + maxLat) / 2,
+      longitude: (minLng + maxLng) / 2,
+      bounds: [[minLng, minLat], [maxLng, maxLat]],
+    });
+  };
   const [selectedRouteCode, setSelectedRouteCode] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
@@ -60,6 +76,7 @@ export default function PetaSimulasiPage() {
   const [stopFilter, setStopFilter] = useState<StopFilterType>('brt');
   const [filterByRoute, setFilterByRoute] = useState<boolean>(false);
   const [selectedStop, setSelectedStop] = useState<any | null>(null);
+  const [relocationSourceStop, setRelocationSourceStop] = useState<any | null>(null);
 
   // Komputasi layer halte terfilter secara reaktif
   const filteredTransjakartaData = useMemo(() => {
@@ -328,6 +345,39 @@ export default function PetaSimulasiPage() {
   };
 
   const handleMapClick = (evt: { lngLat: { lng: number; lat: number } }) => {
+    if (relocationSourceStop) {
+      // Hitung jarak pergeseran antara relocationSourceStop dan titik klik baru
+      const R = 6371000;
+      const phi1 = (relocationSourceStop.lat * Math.PI) / 180;
+      const phi2 = (evt.lngLat.lat * Math.PI) / 180;
+      const deltaPhi = ((evt.lngLat.lat - relocationSourceStop.lat) * Math.PI) / 180;
+      const deltaLambda = ((evt.lngLat.lng - relocationSourceStop.lng) * Math.PI) / 180;
+      const a =
+        Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+        Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const dist = Math.round(R * c);
+
+      if (dist < 20) {
+        showToast("⚠️ Titik baru terlalu dekat dengan halte asal (< 20m). Silakan pilih titik lain di sekitarnya.");
+        return;
+      }
+
+      const sourceStop = relocationSourceStop;
+      setRelocationSourceStop(null);
+      setSelectedLocation({
+        latitude: evt.lngLat.lat,
+        longitude: evt.lngLat.lng,
+      });
+      setSelectedStop(null);
+      setSimulationResult(null);
+      setIsochroneData(null);
+      setIsSimulationMinimized(false);
+      showToast(`🔄 Menjalankan simulasi relokasi ${sourceStop.name} (geser ~${dist}m)...`);
+      handleRunRelocationSimulation(sourceStop.name, evt.lngLat.lat, evt.lngLat.lng, dist);
+      return;
+    }
+
     if (tripPickTarget === 'origin') {
       setOriginLocation({
         latitude: evt.lngLat.lat,
@@ -423,9 +473,11 @@ export default function PetaSimulasiPage() {
         };
       }
 
+      setSimulationResult(null);
       setOdTripResult(enhancedResult);
+      setIsOdTripMinimized(false);
+      focusCameraOnOD(enhancedResult);
       showToast(`✅ Analisis tuntas: Bottleneck ${res.bottleneck.severity}!`);
-      setIsChatOpen(true);
     } catch (err: any) {
       console.error("OD analysis error:", err);
       alert("Gagal menjalankan analisis perjalanan: " + (err.message || 'Terjadi kesalahan'));
@@ -434,7 +486,39 @@ export default function PetaSimulasiPage() {
     }
   };
 
-  const handleRunSimulation = async (scenario: 'tambah' | 'pindah' = selectedStop ? 'pindah' : 'tambah') => {
+  const handleRunRelocationSimulation = async (sourceName: string, lat: number, lng: number, shiftDist: number) => {
+    setIsSimulating(true);
+    try {
+      const result = await apiClient.simulateStop({
+        latitude: lat,
+        longitude: lng,
+        scenario_type: 'pindah',
+        stop_name: `Relokasi ${sourceName} (geser ~${shiftDist}m)`,
+      });
+      setSimulationResult(result);
+      setIsSimulationMinimized(false);
+      setTargetLocation({
+        latitude: lat,
+        longitude: lng,
+        zoom: 16,
+        pitch: 28,
+      });
+
+      try {
+        const iso = await apiClient.getIsochrone(lat, lng);
+        setIsochroneData(iso);
+      } catch (isoErr) {
+        console.warn("Isochrone fetch failed:", isoErr);
+      }
+      showToast(`✓ Relokasi tuntas: ${result.stop_name || 'Halte Relokasi'}`);
+    } catch (err: any) {
+      alert(`Error simulasi relokasi: ${err.message || 'Gagal menjalankan simulasi'}`);
+    } finally {
+      setIsSimulating(false);
+    }
+  };
+
+  const handleRunSimulation = async (scenario: 'tambah' | 'pindah' | 'evaluasi' = selectedStop ? 'evaluasi' : 'tambah') => {
     if (!selectedLocation) {
       alert("Silakan klik lokasi di peta terlebih dahulu untuk menentukan titik simulasi halte.");
       return;
@@ -442,11 +526,12 @@ export default function PetaSimulasiPage() {
 
     setIsSimulating(true);
     try {
+      const stopName = selectedStop ? (scenario === 'evaluasi' ? selectedStop.name : `Relokasi Halte ${selectedStop.name}`) : '';
       const result = await apiClient.simulateStop({
         latitude: selectedLocation.latitude,
         longitude: selectedLocation.longitude,
         scenario_type: scenario,
-        stop_name: selectedStop ? `Relokasi Halte ${selectedStop.name}` : '',
+        stop_name: stopName,
       });
       setSimulationResult(result);
       setIsSimulationMinimized(false);
@@ -464,7 +549,7 @@ export default function PetaSimulasiPage() {
       } catch (isoErr) {
         console.warn("Isochrone fetch failed:", isoErr);
       }
-      showToast(`✓ Simulasi tuntas: ${result.stop_name || 'Halte Usulan'}`);
+      showToast(scenario === 'evaluasi' ? `✓ Evaluasi tuntas: ${result.stop_name || 'Halte Eksisting'}` : `✓ Simulasi tuntas: ${result.stop_name || 'Halte Usulan'}`);
     } catch (err: any) {
       alert(`Error simulasi: ${err.message || 'Gagal menjalankan simulasi'}`);
     } finally {
@@ -740,7 +825,7 @@ export default function PetaSimulasiPage() {
               }
               if (code) showToast(`🚌 Sorot Koridor ${code}`);
             }}
-            cursor={tripPickTarget ? 'crosshair' : 'default'}
+            cursor={tripPickTarget || relocationSourceStop ? 'crosshair' : 'default'}
             onSelectCandidate={(c) => {
               setSimulationResult(c.simulation_result);
               setIsSimulationMinimized(false);
@@ -758,24 +843,27 @@ export default function PetaSimulasiPage() {
             }}
             selectedStop={selectedStop}
             onSelectStop={setSelectedStop}
+            relocationSourceStop={relocationSourceStop}
             onSimulateStop={(stop) => {
+              setSelectedStop(stop);
               setSelectedLocation({ latitude: stop.lat, longitude: stop.lng });
               setTargetLocation({ latitude: stop.lat, longitude: stop.lng, zoom: 16, pitch: 25 });
               apiClient.getIsochrone(stop.lat, stop.lng).then(iso => setIsochroneData(iso)).catch(() => {});
-              showToast(`📍 Halte ${stop.name} dipilih untuk simulasi`);
+              showToast(`📊 Halte ${stop.name} dipilih untuk evaluasi performa`);
             }}
             onAskAiAboutStop={(stop) => {
+              setSelectedStop(stop);
               setSelectedLocation({ latitude: stop.lat, longitude: stop.lng });
               setChatInitialPrompt(`Bagaimana performa jangkauan pedestrian dan integrasi koridor Halte ${stop.name} saat ini?`);
               setIsChatOpen(true);
               showToast(`💬 Asisten AI siap menganalisis Halte ${stop.name}`);
             }}
             onMoveStop={(stop) => {
-              setSelectedLocation({ latitude: stop.lat, longitude: stop.lng });
+              setRelocationSourceStop(stop);
+              setSelectedStop(stop);
+              setSelectedLocation(null);
               setTargetLocation({ latitude: stop.lat, longitude: stop.lng, zoom: 16, pitch: 25 });
-              setChatInitialPrompt(`Bagaimana rekomendasi relokasi untuk Halte ${stop.name}? Tolong simulasikan pemindahan halte ini ke lokasi yang lebih strategis di sekitarnya.`);
-              setIsChatOpen(true);
-              showToast(`🔄 Meminta AI mengevaluasi relokasi Halte ${stop.name}`);
+              showToast(`🔄 Mode Relokasi Aktif: Silakan klik lokasi baru di peta untuk memindahkan Halte ${stop.name}`);
             }}
             onSetAsOrigin={(loc) => {
               setOriginLocation(loc);
@@ -793,6 +881,38 @@ export default function PetaSimulasiPage() {
             }}
             onClick={handleMapClick}
           />
+
+          {/* Banner Mode Relokasi Interaktif */}
+          {relocationSourceStop && (
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-amber-500 text-white shadow-2xl border-2 border-white/40 rounded-2xl px-4 py-2.5 flex items-center gap-3 animate-in fade-in slide-in-from-top-3 duration-200 max-w-[calc(100vw-32px)]">
+              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                <ArrowRightLeft className="w-4.5 h-4.5 text-white" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
+                    Mode Relokasi Aktif
+                  </span>
+                  <span className="text-[12px] font-bold truncate max-w-[180px] sm:max-w-[320px]">
+                    Halte {relocationSourceStop.name}
+                  </span>
+                </div>
+                <span className="text-[11px] text-white/95 mt-0.5">
+                  🎯 Klik lokasi baru di peta tempat halte ini ingin dipindahkan
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setRelocationSourceStop(null);
+                  showToast("❌ Mode relokasi dibatalkan");
+                }}
+                className="ml-auto px-3 py-1 bg-white/20 hover:bg-white/30 text-white rounded-xl text-[11px] font-bold transition-all cursor-pointer shrink-0 border border-white/20"
+              >
+                Batal
+              </button>
+            </div>
+          )}
 
           {/* Top Control - Left (Mobile toggle + AI Badge + Quick Explorer) */}
           <div className="absolute top-4 left-4 md:left-6 z-10 flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -1115,6 +1235,320 @@ export default function PetaSimulasiPage() {
             </div>
           )}
 
+          {/* OD Trip Analysis Minimized Floating Pill */}
+          {odTripResult && isOdTripMinimized && (
+            <div className="absolute top-20 sm:top-24 left-4 sm:left-6 z-20 bg-white/95 backdrop-blur-md border border-[#2D2A70]/20 shadow-xl rounded-2xl p-2.5 flex items-center gap-3 animate-in fade-in duration-200">
+              <div className="w-8 h-8 rounded-xl bg-[#2D2A70] flex items-center justify-center text-white shadow-xs">
+                <Navigation className="w-4 h-4 text-[#ED6B23]" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[12px] font-bold text-[#1A1832] leading-tight flex items-center gap-1.5">
+                  <span>Rute Komuter A → B</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-extrabold ${
+                    odTripResult.bottleneck.severity === 'Kritis'
+                      ? 'bg-red-100 text-red-700'
+                      : odTripResult.bottleneck.severity === 'Sedang'
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-emerald-100 text-emerald-800'
+                  }`}>
+                    {odTripResult.proposed_stop.action === 'none' ? 'Optimal' : odTripResult.bottleneck.severity}
+                  </span>
+                </span>
+                <span className="text-[10px] text-[#6B6B8F]">
+                  Friksi: <strong className="text-[#2D2A70]">{odTripResult.bottleneck.friction_score}/100</strong> • As-Is: <strong className="text-gray-800">~{odTripResult.as_is_journey.total_duration_minutes}m</strong>
+                </span>
+              </div>
+              <div className="flex items-center gap-1 ml-1">
+                <button
+                  onClick={() => setIsOdTripMinimized(false)}
+                  className="px-2.5 py-1 bg-[#2D2A70] hover:bg-[#1E1E3A] text-white text-[10px] font-bold rounded-lg flex items-center gap-1 transition-all shadow-xs cursor-pointer"
+                  title="Buka panel rute komuter lengkap"
+                >
+                  <ChevronUp className="w-3.5 h-3.5" />
+                  <span>Buka</span>
+                </button>
+                <button
+                  onClick={() => setOdTripResult(null)}
+                  className="w-6 h-6 rounded-full hover:bg-gray-100 flex items-center justify-center text-[#6B6B8F] cursor-pointer"
+                  title="Tutup analisis rute"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* OD Trip Analysis Full Overlay Modal */}
+          {odTripResult && !isOdTripMinimized && (
+            <div className="absolute top-20 sm:top-24 left-4 sm:left-6 z-20 w-[calc(100vw-32px)] sm:w-[420px] max-h-[calc(100vh-140px)] overflow-y-auto bg-white/95 backdrop-blur-md border border-[#E2E2EF] shadow-2xl rounded-2xl p-4 animate-in fade-in slide-in-from-left-4 duration-300 font-sans">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-2.5 border-b border-[#E2E2EF]">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#2D2A70] to-[#1E1E3A] flex items-center justify-center text-white shadow-xs">
+                    <Navigation className="w-4 h-4 text-[#ED6B23]" />
+                  </div>
+                  <div>
+                    <h3 className="text-[13px] font-bold text-[#1A1832] leading-tight">
+                      Analisis Bottleneck Komuter
+                    </h3>
+                    <span className="text-[10px] font-medium text-[#6B6B8F]">
+                      Simulasi Spasial As-Is vs To-Be
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setIsOdTripMinimized(true)}
+                    className="w-6 h-6 rounded-full hover:bg-gray-100 flex items-center justify-center text-[#6B6B8F] transition-colors cursor-pointer"
+                    title="Kecilkan panel"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setOdTripResult(null)}
+                    className="w-6 h-6 rounded-full hover:bg-gray-100 flex items-center justify-center text-[#6B6B8F] transition-colors cursor-pointer"
+                    title="Tutup panel"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Origin to Destination Route Tag */}
+              <div className="mt-3 p-2.5 rounded-xl bg-[#F8F8FC] border border-[#E2E2EF] flex flex-col gap-1.5">
+                <div className="flex items-center justify-between text-[10px] font-semibold text-[#6B6B8F]">
+                  <span>KORIDOR PERJALANAN</span>
+                  <span>Jarak Lurus: ~{(odTripResult.direct_distance_meters / 1000).toFixed(1)} km</span>
+                </div>
+                <div className="flex items-center gap-2 text-[11.5px] font-bold text-[#1A1832]">
+                  <span className="w-4 h-4 rounded-full bg-[#10B981] text-white flex items-center justify-center text-[9px] font-black shrink-0">A</span>
+                  <span className="truncate max-w-[140px]">{odTripResult.origin.name || 'Titik Asal'}</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-[#6B6B8F] shrink-0" />
+                  <span className="w-4 h-4 rounded-full bg-[#EF4444] text-white flex items-center justify-center text-[9px] font-black shrink-0">B</span>
+                  <span className="truncate max-w-[140px]">{odTripResult.destination.name || 'Titik Tujuan'}</span>
+                </div>
+              </div>
+
+              {/* Friksi & Severity Summary Row */}
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div className="p-2.5 rounded-xl bg-[#F4F4FA] flex flex-col">
+                  <span className="text-[10px] text-[#6B6B8F] font-medium">Status Akses</span>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-extrabold flex items-center gap-1 ${
+                      odTripResult.bottleneck.severity === 'Kritis'
+                        ? 'bg-red-500/15 text-red-700 border border-red-300'
+                        : odTripResult.bottleneck.severity === 'Sedang'
+                        ? 'bg-amber-500/15 text-amber-800 border border-amber-300'
+                        : 'bg-emerald-500/15 text-emerald-700 border border-emerald-300'
+                    }`}>
+                      {odTripResult.proposed_stop.action === 'none' ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <AlertTriangle className="w-3 h-3" />}
+                      <span>{odTripResult.proposed_stop.action === 'none' ? 'Akses: Optimal' : odTripResult.bottleneck.severity}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-[#F4F4FA] flex flex-col">
+                  <span className="text-[10px] text-[#6B6B8F] font-medium">Skor Friksi Perjalanan</span>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <span className="text-[18px] font-black text-[#2D2A70]">
+                      {odTripResult.bottleneck.friction_score}
+                    </span>
+                    <span className="text-[10px] text-[#6B6B8F]">/100</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Diagnosis Callout */}
+              {odTripResult.proposed_stop.action === 'none' ? (
+                <div className="mt-2.5 p-3 rounded-xl bg-emerald-50/80 border border-emerald-300 flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-emerald-900 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Layanan Halte Eksisting Sudah Optimal</span>
+                    </span>
+                    <span className="text-[9px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-extrabold uppercase">
+                      Tidak Butuh Halte Baru
+                    </span>
+                  </div>
+                  <p className="text-[10.5px] text-emerald-950/85 leading-relaxed mt-0.5">
+                    {odTripResult.proposed_stop.rationale}
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-2.5 p-3 rounded-xl bg-[#ED6B23]/10 border border-[#ED6B23]/30 flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-[#ED6B23] flex items-center gap-1.5">
+                      <Bus className="w-3.5 h-3.5" />
+                      <span>Rekomendasi Halte Usulan: {odTripResult.proposed_stop.stop_name}</span>
+                    </span>
+                    <span className="text-[9px] bg-[#ED6B23] text-white px-1.5 py-0.5 rounded font-extrabold uppercase">
+                      {odTripResult.proposed_stop.action}
+                    </span>
+                  </div>
+                  <p className="text-[10.5px] text-[#1A1832]/85 leading-relaxed mt-0.5">
+                    {odTripResult.proposed_stop.rationale}
+                  </p>
+                </div>
+              )}
+
+              {/* As-Is vs To-Be Comparison Grid */}
+              <div className="mt-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-bold text-[#6B6B8F] uppercase tracking-wider">
+                    Komparasi Metrik (As-Is vs To-Be)
+                  </span>
+                  <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                    {odTripResult.proposed_stop.action === 'none' ? 'Status: Efisiensi Puncak' : `Efisiensi: +${odTripResult.efficiency_gain_percent}%`}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {/* As-Is */}
+                  <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-200 flex flex-col gap-1.5">
+                    <span className="text-[9.5px] font-extrabold text-gray-500 uppercase tracking-wide">
+                      Eksisting (As-Is)
+                    </span>
+                    <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-gray-800">
+                      <Clock className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                      <span>~{odTripResult.as_is_journey.total_duration_minutes} Menit</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10.5px] text-gray-600">
+                      <Footprints className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                      <span>Jalan kaki {odTripResult.as_is_journey.total_walk_distance_meters}m</span>
+                    </div>
+                    <div className="text-[10px] text-gray-600">
+                      Beban: <span className="font-semibold text-gray-800">{odTripResult.as_is_journey.pedestrian_strain_level}</span>
+                    </div>
+                    <div className="text-[10px] text-gray-500 border-t border-gray-200 pt-1">
+                      Armada: <strong className="text-gray-700">{odTripResult.as_is_journey.transit_rides_count}x naik bus</strong>
+                    </div>
+                  </div>
+
+                  {/* To-Be */}
+                  <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-300 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9.5px] font-extrabold text-emerald-800 uppercase tracking-wide">
+                        {odTripResult.proposed_stop.action === 'none' ? 'Optimal (To-Be)' : 'Usulan (To-Be)'}
+                      </span>
+                      <span className="text-[9px] font-black text-emerald-700 bg-emerald-200/80 px-1 rounded">
+                        {odTripResult.proposed_stop.action === 'none' ? 'Baseline' : `+${odTripResult.efficiency_gain_percent}%`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11.5px] font-black text-emerald-800">
+                      <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>~{odTripResult.to_be_journey.total_duration_minutes} Menit</span>
+                      {odTripResult.delta_travel_time_minutes > 0 && (
+                        <span className="text-[9.5px] font-bold text-emerald-700">(-{odTripResult.delta_travel_time_minutes}m)</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10.5px] text-emerald-700 font-semibold">
+                      <Footprints className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <span>Jalan kaki {odTripResult.to_be_journey.total_walk_distance_meters}m</span>
+                    </div>
+                    <div className="text-[10px] text-emerald-800">
+                      Beban: <span className="font-bold">{odTripResult.to_be_journey.pedestrian_strain_level}</span>
+                    </div>
+                    <div className="text-[10px] text-emerald-700 border-t border-emerald-200 pt-1">
+                      Armada: <strong className="text-emerald-900">{odTripResult.to_be_journey.transit_rides_count}x naik bus</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tahapan Perjalanan Komuter (Itinerary Steps) */}
+              <div className="mt-3 border-t border-[#E2E2EF] pt-2.5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10.5px] font-bold text-[#2D2A70] flex items-center gap-1.5">
+                    <Navigation className="w-3.5 h-3.5 text-[#ED6B23]" />
+                    <span>Tahapan Rute Komuter ({odTripResult.as_is_journey.steps.length} Langkah):</span>
+                  </span>
+                  {odTripResult.proposed_stop.action !== 'none' && (
+                    <div className="flex bg-[#F4F4FA] p-0.5 rounded-lg text-[9.5px] font-bold border border-[#E2E2EF]">
+                      <button
+                        onClick={() => setOdTripStepTab('as_is')}
+                        className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                          odTripStepTab === 'as_is' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-500'
+                        }`}
+                      >
+                        As-Is
+                      </button>
+                      <button
+                        onClick={() => setOdTripStepTab('to_be')}
+                        className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                          odTripStepTab === 'to_be' ? 'bg-emerald-600 text-white shadow-xs' : 'text-gray-500'
+                        }`}
+                      >
+                        To-Be
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1.5 max-h-[170px] overflow-y-auto pr-1">
+                  {(odTripStepTab === 'to_be' && odTripResult.proposed_stop.action !== 'none'
+                    ? odTripResult.to_be_journey.steps
+                    : odTripResult.as_is_journey.steps
+                  ).map((step, sIdx) => (
+                    <div
+                      key={`step-${sIdx}`}
+                      className="p-2 rounded-xl bg-[#F8F8FC] border border-[#E2E2EF] flex items-start gap-2 text-[10.5px]"
+                    >
+                      <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-white font-bold text-[9px] ${
+                        step.mode === 'walk' ? 'bg-emerald-600' : step.mode === 'transfer' ? 'bg-amber-600' : 'bg-[#2D2A70]'
+                      }`}>
+                        {step.step_number}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-bold text-[#1A1832] truncate">{step.title}</span>
+                          <span className="text-[9.5px] font-semibold text-[#6B6B8F] shrink-0">~{step.duration_minutes} mnt</span>
+                        </div>
+                        <p className="text-[10px] text-[#6B6B8F] leading-snug mt-0.5">{step.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bottom Quick Actions */}
+              <div className="mt-3 border-t border-[#E2E2EF] pt-2.5 flex items-center gap-2">
+                <button
+                  onClick={() => focusCameraOnOD(odTripResult)}
+                  className="flex-1 py-1.5 px-2 bg-white hover:bg-gray-50 border border-[#2D2A70]/30 text-[#2D2A70] text-[10.5px] font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  title="Fokuskan kamera ke seluruh lintasan rute"
+                >
+                  <Compass className="w-3.5 h-3.5 text-[#ED6B23]" />
+                  <span>Fokuskan Rute</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setChatInitialPrompt(`Bagaimana evaluasi komuter dari ${odTripResult.origin.name || 'Titik A'} ke ${odTripResult.destination.name || 'Titik B'} dengan tingkat keparahan ${odTripResult.bottleneck.severity}?`);
+                    setIsChatOpen(true);
+                  }}
+                  className="flex-1 py-1.5 px-2 bg-[#2D2A70] hover:bg-[#1E1E3A] text-white text-[10.5px] font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  title="Bahas rute ini lebih lanjut dengan AI"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-[#ED6B23]" />
+                  <span>Tanya AI</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setOriginLocation(null);
+                    setDestinationLocation(null);
+                    setOdTripResult(null);
+                    showToast('🔄 Rute perjalanan direset');
+                  }}
+                  className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition-colors cursor-pointer"
+                  title="Reset rute komuter"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Simulation Result Minimized Floating Pill */}
           {simulationResult && isSimulationMinimized && (
             <div className="absolute top-20 sm:top-24 left-4 sm:left-6 z-20 bg-white/95 backdrop-blur-md border border-[#2D2A70]/20 shadow-xl rounded-2xl p-2.5 flex items-center gap-3 animate-in fade-in duration-200">
@@ -1353,9 +1787,11 @@ export default function PetaSimulasiPage() {
               <div className="flex items-center gap-2 pl-2 pr-1">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#ED6B23] animate-ping" />
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-bold text-gray-500 uppercase leading-none">Titik Terpilih</span>
-                  <span className="text-[11px] font-bold text-[#2D2A70] leading-tight">
-                    {selectedLocation.latitude.toFixed(4)}, {selectedLocation.longitude.toFixed(4)}
+                  <span className="text-[9px] font-bold text-gray-500 uppercase leading-none">
+                    {selectedStop ? (selectedStop.is_brt ? 'Halte BRT Eksisting' : 'Bus Stop Feeder Eksisting') : 'Titik Baru Terpilih'}
+                  </span>
+                  <span className="text-[11px] font-bold text-[#2D2A70] leading-tight truncate max-w-[170px] sm:max-w-[260px]">
+                    {selectedStop ? selectedStop.name : `${selectedLocation.latitude.toFixed(4)}, ${selectedLocation.longitude.toFixed(4)}`}
                   </span>
                 </div>
               </div>
@@ -1365,7 +1801,11 @@ export default function PetaSimulasiPage() {
               {/* Tanya AI */}
               <button
                 onClick={() => {
-                  setChatInitialPrompt(`Tolong analisis potensi dan kebutuhan halte transportasi umum di titik koordinat ${selectedLocation.latitude.toFixed(4)}, ${selectedLocation.longitude.toFixed(4)}.`);
+                  if (selectedStop) {
+                    setChatInitialPrompt(`Bagaimana performa jangkauan pedestrian dan integrasi koridor Halte ${selectedStop.name} saat ini?`);
+                  } else {
+                    setChatInitialPrompt(`Tolong analisis potensi dan kebutuhan halte transportasi umum di titik koordinat ${selectedLocation.latitude.toFixed(4)}, ${selectedLocation.longitude.toFixed(4)}.`);
+                  }
                   setIsChatOpen(true);
                   showToast('💬 Mengajukan pertanyaan ke Asisten AI...');
                 }}
@@ -1375,26 +1815,54 @@ export default function PetaSimulasiPage() {
                 <span>Tanya AI</span>
               </button>
 
-              {/* Simulasikan Halte Baru */}
-              <button
-                onClick={() => handleRunSimulation('tambah')}
-                disabled={isSimulating}
-                className="px-3 py-1.5 bg-[#ED6B23] hover:bg-[#d65f1e] text-white rounded-xl text-[11px] font-bold shadow-xs flex items-center gap-1.5 disabled:opacity-50 transition-all cursor-pointer"
-              >
-                {isSimulating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bus className="w-3.5 h-3.5" />}
-                <span>{isSimulating ? 'Menganalisis...' : 'Simulasi Halte Baru'}</span>
-              </button>
+              {/* Contextual Action: Evaluasi vs Simulasi Halte Baru */}
+              {selectedStop ? (
+                <>
+                  <button
+                    onClick={() => handleRunSimulation('evaluasi')}
+                    disabled={isSimulating}
+                    className="px-3 py-1.5 bg-[#2D2A70] hover:bg-[#3D3A88] text-white rounded-xl text-[11px] font-bold shadow-xs flex items-center gap-1.5 disabled:opacity-50 transition-all cursor-pointer"
+                    title="Audit performa jangkauan pejalan kaki, UMKM, dan kelayakan halte eksisting ini"
+                  >
+                    {isSimulating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BarChart3 className="w-3.5 h-3.5 text-[#ED6B23]" />}
+                    <span>{isSimulating ? 'Mengevaluasi...' : 'Evaluasi Halte'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setRelocationSourceStop(selectedStop);
+                      setSelectedLocation(null);
+                      showToast(`🔄 Mode Relokasi Aktif: Klik lokasi baru di peta untuk memindahkan Halte ${selectedStop.name}`);
+                    }}
+                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[11px] font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                    title="Pilih lokasi baru di peta untuk memindahkan halte ini"
+                  >
+                    <ArrowRightLeft className="w-3.5 h-3.5" />
+                    <span>Pindahkan</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => handleRunSimulation('tambah')}
+                  disabled={isSimulating}
+                  className="px-3 py-1.5 bg-[#ED6B23] hover:bg-[#d65f1e] text-white rounded-xl text-[11px] font-bold shadow-xs flex items-center gap-1.5 disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  {isSimulating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bus className="w-3.5 h-3.5" />}
+                  <span>{isSimulating ? 'Menganalisis...' : 'Simulasi Halte Baru'}</span>
+                </button>
+              )}
 
               {/* Set Titik Asal A */}
               <button
                 onClick={() => {
+                  const name = selectedStop ? selectedStop.name : `Titik A (${selectedLocation.latitude.toFixed(3)}, ${selectedLocation.longitude.toFixed(3)})`;
                   setOriginLocation({
                     latitude: selectedLocation.latitude,
                     longitude: selectedLocation.longitude,
-                    name: `Titik A (${selectedLocation.latitude.toFixed(3)}, ${selectedLocation.longitude.toFixed(3)})`,
+                    name: name,
                   });
                   if (!destinationLocation) setTripPickTarget('destination');
-                  showToast('📍 Titik Asal (A) ditetapkan');
+                  showToast(`📍 Titik Asal (A) diset: ${name}`);
                 }}
                 className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-[#10B981] border border-emerald-200 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
                 title="Jadikan titik awal rute komuter"
@@ -1405,13 +1873,14 @@ export default function PetaSimulasiPage() {
               {/* Set Titik Tujuan B */}
               <button
                 onClick={() => {
+                  const name = selectedStop ? selectedStop.name : `Titik B (${selectedLocation.latitude.toFixed(3)}, ${selectedLocation.longitude.toFixed(3)})`;
                   setDestinationLocation({
                     latitude: selectedLocation.latitude,
                     longitude: selectedLocation.longitude,
-                    name: `Titik B (${selectedLocation.latitude.toFixed(3)}, ${selectedLocation.longitude.toFixed(3)})`,
+                    name: name,
                   });
                   setTripPickTarget(null);
-                  showToast('🏁 Titik Tujuan (B) ditetapkan');
+                  showToast(`🏁 Titik Tujuan (B) diset: ${name}`);
                 }}
                 className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-[#EF4444] border border-red-200 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
                 title="Jadikan titik tujuan rute komuter"
@@ -1423,6 +1892,7 @@ export default function PetaSimulasiPage() {
               <button
                 onClick={() => {
                   setSelectedLocation(null);
+                  setSelectedStop(null);
                 }}
                 className="w-7 h-7 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 flex items-center justify-center transition-colors cursor-pointer ml-auto sm:ml-0"
                 title="Batalkan pilihan"
@@ -1493,9 +1963,12 @@ export default function PetaSimulasiPage() {
               showToast(`🎯 AI mengarahkan peta ke: ${sim.stop_name || 'Halte Usulan'}`);
             }}
             onODTripTriggered={(od) => {
+              setSimulationResult(null);
               setOdTripResult(od);
+              setIsOdTripMinimized(false);
               if (od.origin) setOriginLocation(od.origin);
               if (od.destination) setDestinationLocation(od.destination);
+              focusCameraOnOD(od);
               showToast(`🎯 Bottleneck perjalanan: ${od.bottleneck.severity}`);
             }}
             onToggleLayer={(layerId) => {

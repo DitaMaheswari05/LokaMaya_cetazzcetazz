@@ -51,7 +51,11 @@ func (s *AnalysisService) RunSimulationQuick(ctx context.Context, req *model.Sim
 		strings.HasPrefix(req.StopName, "-")
 
 	if req.StopName == "" {
-		req.StopName = fmt.Sprintf("Halte Usulan (%.4f, %.4f)", req.Latitude, req.Longitude)
+		if req.ScenarioType == "evaluasi" || req.ScenarioType == "audit" {
+			req.StopName = fmt.Sprintf("Evaluasi Halte (%.4f, %.4f)", req.Latitude, req.Longitude)
+		} else {
+			req.StopName = fmt.Sprintf("Halte Usulan (%.4f, %.4f)", req.Latitude, req.Longitude)
+		}
 	}
 
 	// 1. Hitung Skor Akses Jalan Kaki
@@ -83,6 +87,11 @@ func (s *AnalysisService) RunSimulationQuick(ctx context.Context, req *model.Sim
 	// Resolusi nama daerah yang cerdas & manusiawi jika nama sebelumnya generik koordinat
 	if isGenericName {
 		resolvedName := s.resolveAreaName(req.Latitude, req.Longitude, feasibility.ZoneName, routeComp)
+		if req.ScenarioType == "evaluasi" || req.ScenarioType == "audit" {
+			if !strings.HasPrefix(resolvedName, "Evaluasi ") {
+				resolvedName = "Evaluasi Halte " + resolvedName
+			}
+		}
 		req.StopName = resolvedName
 		if routeComp != nil {
 			routeComp.ChangedSegment = strings.ReplaceAll(routeComp.ChangedSegment, "Halte Usulan", resolvedName)

@@ -192,7 +192,7 @@ export interface BehavioralRippleDetail {
 
 export interface SimulationResult {
   id: string;
-  scenario_type: 'tambah' | 'pindah' | 'tutup';
+  scenario_type: 'tambah' | 'pindah' | 'tutup' | 'evaluasi';
   stop_name: string;
   latitude: number;
   longitude: number;
@@ -227,7 +227,7 @@ export interface OptimalSearchResponse {
 export interface SimulateRequest {
   latitude: number;
   longitude: number;
-  scenario_type: 'tambah' | 'pindah' | 'tutup';
+  scenario_type: 'tambah' | 'pindah' | 'tutup' | 'evaluasi';
   stop_name?: string;
   target_stop_id?: string;
 }

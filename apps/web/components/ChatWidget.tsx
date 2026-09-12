@@ -519,7 +519,7 @@ export default function ChatWidget({
                           📍 {m.odTrip.origin.name || 'Titik A'} → 🏁 {m.odTrip.destination.name || 'Titik B'}
                         </p>
 
-                        {/* If stop is already optimal */}
+                        {/* Diagnosis Banner */}
                         {isOptimal ? (
                           <div className="p-2.5 rounded-lg bg-emerald-50/80 border border-emerald-300 flex flex-col gap-1.5 mt-0.5">
                             <div className="flex items-center justify-between">
@@ -534,103 +534,103 @@ export default function ChatWidget({
                             <p className="text-[9.5px] text-emerald-950/80 leading-snug">
                               {m.odTrip.proposed_stop.rationale}
                             </p>
-                            <div className="flex items-center gap-3 pt-1 border-t border-emerald-200 text-[10px]">
-                              <div className="flex items-center gap-1 text-emerald-900 font-bold">
-                                <Clock className="w-3 h-3 text-emerald-600" />
-                                <span>~{m.odTrip.as_is_journey.total_duration_minutes} Menit</span>
-                              </div>
-                              <div className="flex items-center gap-1 text-emerald-800">
-                                <Footprints className="w-3 h-3 text-emerald-600" />
-                                <span>Jalan kaki {m.odTrip.as_is_journey.total_walk_distance_meters}m</span>
-                              </div>
-                              <div className="text-[9.5px] text-emerald-800">
-                                Beban: <span className="font-bold">{m.odTrip.as_is_journey.pedestrian_strain_level}</span>
-                              </div>
-                            </div>
                           </div>
                         ) : (
-                          <>
-                            {/* As-Is vs To-Be Comparison Grid */}
-                            <div className="grid grid-cols-2 gap-2 mt-1">
-                              {/* As-Is Box */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-200 flex flex-col gap-1">
-                                <span className="text-[9px] font-extrabold text-gray-500 uppercase tracking-wide">
-                                  Eksisting (As-Is)
-                                </span>
-                                <div className="flex items-center gap-1 text-[11px] font-bold text-gray-800">
-                                  <Clock className="w-3 h-3 text-gray-500" />
-                                  <span>~{m.odTrip.as_is_journey.total_duration_minutes} Menit</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[10px] text-gray-600">
-                                  <Footprints className="w-3 h-3 text-gray-400" />
-                                  <span>Jalan kaki {m.odTrip.as_is_journey.total_walk_distance_meters}m</span>
-                                </div>
-                                <div className="text-[9.5px] text-gray-500">
-                                  Beban: <span className="font-semibold text-gray-700">{m.odTrip.as_is_journey.pedestrian_strain_level}</span>
-                                </div>
-                              </div>
-
-                              {/* To-Be Box */}
-                              <div className="p-2 rounded-lg bg-emerald-50/70 border border-emerald-300 flex flex-col gap-1">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[9px] font-extrabold text-emerald-800 uppercase tracking-wide">
-                                    Usulan (To-Be)
-                                  </span>
-                                  <span className="text-[9px] font-black text-emerald-700 bg-emerald-200/80 px-1 rounded">
-                                    +{m.odTrip.efficiency_gain_percent}%
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[11px] font-black text-emerald-800">
-                                  <Clock className="w-3 h-3 text-emerald-600" />
-                                  <span>~{m.odTrip.to_be_journey.total_duration_minutes} Menit</span>
-                                  <span className="text-[9.5px] font-bold text-emerald-700">(-{m.odTrip.delta_travel_time_minutes}m)</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[10px] text-emerald-700 font-semibold">
-                                  <Footprints className="w-3 h-3 text-emerald-500" />
-                                  <span>Jalan kaki {m.odTrip.to_be_journey.total_walk_distance_meters}m</span>
-                                </div>
-                                <div className="text-[9.5px] text-emerald-800">
-                                  Beban: <span className="font-bold">{m.odTrip.to_be_journey.pedestrian_strain_level}</span>
-                                </div>
-                              </div>
+                          <div className="p-2 rounded-lg bg-[#ED6B23]/10 border border-[#ED6B23]/30 flex flex-col gap-1 mt-0.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-[#ED6B23] flex items-center gap-1">
+                                <Bus className="w-3 h-3" />
+                                <span>{m.odTrip.proposed_stop.stop_name}</span>
+                              </span>
+                              <span className="text-[9px] bg-[#ED6B23] text-white px-1.5 py-0.2 rounded font-bold uppercase">
+                                {m.odTrip.proposed_stop.action}
+                              </span>
                             </div>
-
-                            {/* Proposed Stop Callout */}
-                            <div className="p-2 rounded-lg bg-[#ED6B23]/10 border border-[#ED6B23]/30 flex flex-col gap-1 mt-0.5">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-[#ED6B23] flex items-center gap-1">
-                                  <Bus className="w-3 h-3" />
-                                  <span>{m.odTrip.proposed_stop.stop_name}</span>
-                                </span>
-                                <span className="text-[9px] bg-[#ED6B23] text-white px-1.5 py-0.2 rounded font-bold uppercase">
-                                  {m.odTrip.proposed_stop.action}
-                                </span>
-                              </div>
-                              <p className="text-[9.5px] text-[#1A1832]/80 leading-snug">
-                                {m.odTrip.proposed_stop.rationale}
-                              </p>
-                            </div>
-
-                            {/* Action button to focus map */}
-                            {m.odTrip.proposed_stop.latitude !== 0 && (
-                              <div className="flex items-center gap-1.5 pt-0.5">
-                                <button
-                                  type="button"
-                                  onClick={() => onFocusLocation && onFocusLocation({
-                                    latitude: m.odTrip!.proposed_stop.latitude,
-                                    longitude: m.odTrip!.proposed_stop.longitude,
-                                    name: m.odTrip!.proposed_stop.stop_name,
-                                    zoom: 16,
-                                  })}
-                                  className="px-2.5 py-1 bg-white hover:bg-gray-50 border border-[#2D2A70]/30 text-[#2D2A70] text-[10px] font-bold rounded-lg flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
-                                >
-                                  <Compass className="w-3 h-3 text-[#ED6B23]" />
-                                  <span>Lihat Halte Rekomendasi di Peta</span>
-                                </button>
-                              </div>
-                            )}
-                          </>
+                            <p className="text-[9.5px] text-[#1A1832]/80 leading-snug">
+                              {m.odTrip.proposed_stop.rationale}
+                            </p>
+                          </div>
                         )}
+
+                        {/* As-Is vs To-Be Comparison Grid - Always visible for transparency */}
+                        <div className="grid grid-cols-2 gap-2 mt-1">
+                          {/* As-Is Box */}
+                          <div className="p-2 rounded-lg bg-gray-50 border border-gray-200 flex flex-col gap-1">
+                            <span className="text-[9px] font-extrabold text-gray-500 uppercase tracking-wide">
+                              Eksisting (As-Is)
+                            </span>
+                            <div className="flex items-center gap-1 text-[11px] font-bold text-gray-800">
+                              <Clock className="w-3 h-3 text-gray-500" />
+                              <span>~{m.odTrip.as_is_journey.total_duration_minutes} Menit</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-[10px] text-gray-600">
+                              <Footprints className="w-3 h-3 text-gray-400" />
+                              <span>Jalan kaki {m.odTrip.as_is_journey.total_walk_distance_meters}m</span>
+                            </div>
+                            <div className="text-[9.5px] text-gray-500">
+                              Beban: <span className="font-semibold text-gray-700">{m.odTrip.as_is_journey.pedestrian_strain_level}</span>
+                            </div>
+                          </div>
+
+                          {/* To-Be Box */}
+                          <div className="p-2 rounded-lg bg-emerald-50/70 border border-emerald-300 flex flex-col gap-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] font-extrabold text-emerald-800 uppercase tracking-wide">
+                                {isOptimal ? 'Optimal (To-Be)' : 'Usulan (To-Be)'}
+                              </span>
+                              <span className="text-[9px] font-black text-emerald-700 bg-emerald-200/80 px-1 rounded">
+                                {isOptimal ? 'Efisiensi Puncak' : `+${m.odTrip.efficiency_gain_percent}%`}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 text-[11px] font-black text-emerald-800">
+                              <Clock className="w-3 h-3 text-emerald-600" />
+                              <span>~{m.odTrip.to_be_journey.total_duration_minutes} Menit</span>
+                              {!isOptimal && m.odTrip.delta_travel_time_minutes > 0 && (
+                                <span className="text-[9.5px] font-bold text-emerald-700">(-{m.odTrip.delta_travel_time_minutes}m)</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 text-[10px] text-emerald-700 font-semibold">
+                              <Footprints className="w-3 h-3 text-emerald-500" />
+                              <span>Jalan kaki {m.odTrip.to_be_journey.total_walk_distance_meters}m</span>
+                            </div>
+                            <div className="text-[9.5px] text-emerald-800">
+                              Beban: <span className="font-bold">{m.odTrip.to_be_journey.pedestrian_strain_level}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action buttons to focus map */}
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => onFocusLocation && onFocusLocation({
+                              latitude: (m.odTrip!.origin.latitude + m.odTrip!.destination.latitude) / 2,
+                              longitude: (m.odTrip!.origin.longitude + m.odTrip!.destination.longitude) / 2,
+                              name: `Rute ${m.odTrip!.origin.name || 'A'} → ${m.odTrip!.destination.name || 'B'}`,
+                              zoom: 12.5,
+                            })}
+                            className="px-2.5 py-1 bg-white hover:bg-gray-50 border border-[#2D2A70]/30 text-[#2D2A70] text-[10px] font-bold rounded-lg flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
+                          >
+                            <Compass className="w-3 h-3 text-[#ED6B23]" />
+                            <span>Fokuskan Rute di Peta</span>
+                          </button>
+
+                          {!isOptimal && m.odTrip.proposed_stop.latitude !== 0 && (
+                            <button
+                              type="button"
+                              onClick={() => onFocusLocation && onFocusLocation({
+                                latitude: m.odTrip!.proposed_stop.latitude,
+                                longitude: m.odTrip!.proposed_stop.longitude,
+                                name: m.odTrip!.proposed_stop.stop_name,
+                                zoom: 16,
+                              })}
+                              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-[10px] font-bold rounded-lg flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
+                            >
+                              <Bus className="w-3 h-3 text-emerald-600" />
+                              <span>Lihat Titik Halte Usulan</span>
+                            </button>
+                          )}
+                        </div>
 
                         {/* Breakdown of Journey Steps */}
                         <div className="mt-1 border-t border-gray-200/80 pt-2 flex flex-col gap-1.5">

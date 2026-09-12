@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState, useRef, useCallback } from 'react';
 import Map, { MapRef, Marker, Source, Layer, NavigationControl, ScaleControl, Popup } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Compass, Bus, MapPin, Route as RouteIcon, Info, X, Sparkles, ArrowRightLeft } from 'lucide-react';
+import { Compass, Bus, MapPin, Route as RouteIcon, Info, X, Sparkles, ArrowRightLeft, BarChart3 } from 'lucide-react';
 
 import { RouteComparisonDetail, RouteStopItem, OptimalStopCandidate, ODTripAnalysisResult, ODLocation } from '@/types/api';
 
@@ -22,7 +22,7 @@ interface MapComponentProps {
   styleName?: 'street-v2.0' | 'satellite-v2.0' | 'dark-v2.0' | 'light-v2.0';
   className?: string;
   children?: ReactNode;
-  targetLocation?: { latitude: number; longitude: number; zoom?: number; pitch?: number; bearing?: number } | null;
+  targetLocation?: { latitude: number; longitude: number; zoom?: number; pitch?: number; bearing?: number; bounds?: [[number, number], [number, number]] } | null;
   selectedLocation?: { latitude: number; longitude: number } | null;
   originLocation?: ODLocation | null;
   destinationLocation?: ODLocation | null;
@@ -42,6 +42,7 @@ interface MapComponentProps {
   onAskAiAboutStop?: (stop: SelectedStopDetail) => void;
   onSimulateStop?: (stop: SelectedStopDetail) => void;
   onMoveStop?: (stop: SelectedStopDetail) => void;
+  relocationSourceStop?: SelectedStopDetail | null;
   onSetAsOrigin?: (loc: { latitude: number; longitude: number; name: string }) => void;
   onSetAsDestination?: (loc: { latitude: number; longitude: number; name: string }) => void;
 }
@@ -70,6 +71,7 @@ export default function MapComponent({
   onAskAiAboutStop,
   onSimulateStop,
   onMoveStop,
+  relocationSourceStop,
   onSetAsOrigin,
   onSetAsDestination,
 }: MapComponentProps) {
@@ -96,6 +98,19 @@ export default function MapComponent({
   useEffect(() => {
     if (!targetLocation) return;
     if (mapRef.current) {
+      if (targetLocation.bounds) {
+        const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 640;
+        mapRef.current.fitBounds(targetLocation.bounds, {
+          padding: isDesktop
+            ? { top: 90, bottom: 90, left: 400, right: 90 }
+            : { top: 70, bottom: 120, left: 30, right: 30 },
+          duration: 1800,
+          essential: true,
+          maxZoom: 14.5,
+        });
+        return;
+      }
+
       mapRef.current.flyTo({
         center: [targetLocation.longitude, targetLocation.latitude],
         zoom: targetLocation.zoom || 15.5,
@@ -113,6 +128,32 @@ export default function MapComponent({
       return () => clearTimeout(timer);
     }
   }, [targetLocation, mapLoaded]);
+
+  // Auto-fit camera view to encompass both Origin (A) and Destination (B) when an OD trip is analyzed
+  useEffect(() => {
+    if (!odTripResult || !originLocation || !destinationLocation || !mapRef.current) return;
+
+    const minLng = Math.min(originLocation.longitude, destinationLocation.longitude);
+    const maxLng = Math.max(originLocation.longitude, destinationLocation.longitude);
+    const minLat = Math.min(originLocation.latitude, destinationLocation.latitude);
+    const maxLat = Math.max(originLocation.latitude, destinationLocation.latitude);
+
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 640;
+    mapRef.current.fitBounds(
+      [
+        [minLng, minLat],
+        [maxLng, maxLat],
+      ],
+      {
+        padding: isDesktop
+          ? { top: 100, bottom: 100, left: 420, right: 100 }
+          : { top: 80, bottom: 130, left: 40, right: 40 },
+        duration: 1800,
+        essential: true,
+        maxZoom: 14.5,
+      }
+    );
+  }, [odTripResult, originLocation, destinationLocation]);
 
   // Gentle geolocation centering if no target has been set yet
   useEffect(() => {
@@ -252,6 +293,23 @@ export default function MapComponent({
               <span className="absolute w-16 h-16 rounded-full bg-[#2D2A70]/20 animate-pulse" />
               <span className="w-8 h-8 rounded-full border-2 border-[#ED6B23] bg-white/50 shadow-lg flex items-center justify-center">
                 <span className="w-3 h-3 rounded-full bg-[#ED6B23] shadow-md" />
+              </span>
+            </div>
+          </Marker>
+        )}
+
+        {/* Visual Halo Halte Asal saat Mode Relokasi Aktif */}
+        {relocationSourceStop && (
+          <Marker
+            longitude={relocationSourceStop.lng}
+            latitude={relocationSourceStop.lat}
+            anchor="center"
+          >
+            <div className="relative flex items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2">
+              <span className="absolute w-24 h-24 rounded-full bg-amber-500/30 animate-ping duration-1000" />
+              <span className="absolute w-14 h-14 rounded-full bg-amber-500/20 animate-pulse" />
+              <span className="px-2 py-0.5 rounded-full border-2 border-amber-400 bg-amber-600 text-white shadow-xl flex items-center justify-center font-bold text-[9px] whitespace-nowrap">
+                Asal: {relocationSourceStop.name.slice(0, 15)}...
               </span>
             </div>
           </Marker>
@@ -527,7 +585,21 @@ export default function MapComponent({
         {/* OD Trip Visualization Layer (As-Is line & To-Be line) */}
         {odTripResult && odTripResult.route_geojson && (
           <Source id="od-trip-source" type="geojson" data={odTripResult.route_geojson}>
-            {/* Jalur As-Is: Garis putus-putus abu-abu */}
+            {/* White outline/casing for high visibility against any basemap */}
+            <Layer
+              id="od-line-casing"
+              type="line"
+              layout={{
+                'line-join': 'round',
+                'line-cap': 'round',
+              }}
+              paint={{
+                'line-color': '#FFFFFF',
+                'line-width': 8.5,
+                'line-opacity': 0.95,
+              }}
+            />
+            {/* Jalur As-Is: Garis putus-putus indigo tegas */}
             <Layer
               id="od-as-is-line"
               type="line"
@@ -537,10 +609,10 @@ export default function MapComponent({
                 'line-cap': 'round',
               }}
               paint={{
-                'line-color': '#64748B',
-                'line-width': 3.5,
-                'line-dasharray': [2, 2],
-                'line-opacity': 0.85,
+                'line-color': '#4F46E5',
+                'line-width': 4.5,
+                'line-dasharray': [3, 2],
+                'line-opacity': 0.95,
               }}
             />
             {/* Jalur To-Be: Garis solid hijau emerald */}
@@ -554,7 +626,7 @@ export default function MapComponent({
               }}
               paint={{
                 'line-color': '#10B981',
-                'line-width': 5,
+                'line-width': 5.5,
                 'line-opacity': 0.95,
               }}
             />
@@ -716,7 +788,7 @@ export default function MapComponent({
                 )}
               </div>
 
-              {/* Action Buttons: Simulasikan, Pindahkan, & Tanya AI */}
+              {/* Action Buttons: Evaluasi, Pindahkan, & Tanya AI */}
               <div className="border-t border-white/10 pt-2.5 mt-2.5 grid grid-cols-3 gap-1">
                 <button
                   type="button"
@@ -727,10 +799,10 @@ export default function MapComponent({
                     }
                   }}
                   className="px-1.5 py-1.5 bg-[#2D2A70] hover:bg-[#3D3A88] text-white rounded-lg text-[9.5px] font-bold flex items-center justify-center gap-1 border border-white/15 shadow-xs transition-colors cursor-pointer"
-                  title="Pusatkan analisis & simulasi di halte ini"
+                  title="Audit performa akses pejalan kaki, UMKM, dan kelayakan halte eksisting ini"
                 >
-                  <MapPin className="w-3 h-3 text-[#ED6B23]" />
-                  <span>Simulasi</span>
+                  <BarChart3 className="w-3 h-3 text-[#ED6B23]" />
+                  <span>Evaluasi</span>
                 </button>
                 {onMoveStop && (
                   <button
@@ -740,7 +812,7 @@ export default function MapComponent({
                       onMoveStop(activeSelectedStop);
                     }}
                     className="px-1.5 py-1.5 bg-amber-600/90 hover:bg-amber-600 text-white rounded-lg text-[9.5px] font-bold flex items-center justify-center gap-1 shadow-xs transition-all cursor-pointer"
-                    title="Simulasikan pemindahan halte ini ke lokasi baru"
+                    title="Pilih halte ini untuk dipindahkan ke lokasi baru di peta"
                   >
                     <ArrowRightLeft className="w-3 h-3 text-white" />
                     <span>Pindah</span>
@@ -828,10 +900,10 @@ export default function MapComponent({
             latitude={originLocation.latitude}
             anchor="bottom"
           >
-            <div className="flex flex-col items-center cursor-pointer group hover:scale-110 transition-transform">
-              <div className="px-2.5 py-1 rounded-full bg-[#10B981] text-white font-black text-[11px] shadow-xl border-2 border-white flex items-center gap-1.5 animate-bounce">
-                <span className="w-4 h-4 rounded-full bg-white text-[#10B981] flex items-center justify-center text-[10px] font-black">A</span>
-                <span className="text-[10.5px] font-bold max-w-[100px] truncate">{originLocation.name || 'Asal'}</span>
+            <div className="flex flex-col items-center cursor-pointer group hover:scale-105 transition-transform">
+              <div className="px-2.5 py-1 rounded-full bg-[#10B981] text-white font-black text-[11px] shadow-2xl border-2 border-white flex items-center gap-1.5">
+                <span className="w-4 h-4 rounded-full bg-white text-[#10B981] flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs">A</span>
+                <span className="text-[10.5px] font-bold max-w-[140px] truncate">{originLocation.name || 'Titik Asal'}</span>
               </div>
               <div className="w-2.5 h-2.5 bg-[#10B981] rotate-45 -mt-1 border-r border-b border-white" />
             </div>
@@ -845,10 +917,10 @@ export default function MapComponent({
             latitude={destinationLocation.latitude}
             anchor="bottom"
           >
-            <div className="flex flex-col items-center cursor-pointer group hover:scale-110 transition-transform">
-              <div className="px-2.5 py-1 rounded-full bg-[#EF4444] text-white font-black text-[11px] shadow-xl border-2 border-white flex items-center gap-1.5 animate-bounce">
-                <span className="w-4 h-4 rounded-full bg-white text-[#EF4444] flex items-center justify-center text-[10px] font-black">B</span>
-                <span className="text-[10.5px] font-bold max-w-[100px] truncate">{destinationLocation.name || 'Tujuan'}</span>
+            <div className="flex flex-col items-center cursor-pointer group hover:scale-105 transition-transform">
+              <div className="px-2.5 py-1 rounded-full bg-[#EF4444] text-white font-black text-[11px] shadow-2xl border-2 border-white flex items-center gap-1.5">
+                <span className="w-4 h-4 rounded-full bg-white text-[#EF4444] flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs">B</span>
+                <span className="text-[10.5px] font-bold max-w-[140px] truncate">{destinationLocation.name || 'Titik Tujuan'}</span>
               </div>
               <div className="w-2.5 h-2.5 bg-[#EF4444] rotate-45 -mt-1 border-r border-b border-white" />
             </div>

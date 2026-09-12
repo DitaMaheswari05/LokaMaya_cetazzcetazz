@@ -478,34 +478,57 @@ func (r *SpatialRepository) GenerateRouteComparison(ctx context.Context, lat, ln
 	var summary string
 
 	switch scenarioType {
+	case "evaluasi", "audit":
+		toBeStops = asIsStops
+		deltaDist = 0.0
+		deltaMinutes = 0.0
+		changedSegment = fmt.Sprintf("Evaluasi Performa Halte: %s", stopName)
+		summary = fmt.Sprintf("Audit kinerja Halte %s pada Koridor %s (kondisi eksisting tanpa perubahan rute).", stopName, bestRoute.RouteCode)
+
 	case "pindah":
-		toBeStops = make([]model.RouteStopItem, len(stops))
-		for i, s := range stops {
-			if i == nearestStopIdx {
-				toBeStops[i] = model.RouteStopItem{
-					Sequence:    i + 1,
-					Name:        fmt.Sprintf("%s (Relokasi)", stopName),
-					Status:      "relocated",
-					IsSimulated: true,
-					Latitude:    lat,
-					Longitude:   lng,
-				}
-			} else {
-				toBeStops[i] = model.RouteStopItem{
-					Sequence:    i + 1,
-					Name:        s.Name,
-					Status:      "existing",
-					IsSimulated: false,
-					Latitude:    s.Latitude,
-					Longitude:   s.Longitude,
+		shiftDist := nearestStopDist
+		if shiftDist < 30.0 {
+			// Evaluasi di koordinat yang sama (tidak ada pergeseran fisik)
+			toBeStops = asIsStops
+			deltaDist = 0.0
+			deltaMinutes = 0.0
+			changedSegment = fmt.Sprintf("Lokasi Sama (Tanpa Pergeseran): Halte %s", stops[nearestStopIdx].Name)
+			summary = fmt.Sprintf("Titik relokasi identik dengan lokasi eksisting Halte %s pada Koridor %s (pergeseran 0m).", stops[nearestStopIdx].Name, bestRoute.RouteCode)
+		} else if nearestStopDist > 800.0 {
+			// Titik berada jauh dari lintasan koridor BRT (zona rute pengumpan / feeder)
+			toBeStops = asIsStops
+			deltaDist = 0.0
+			deltaMinutes = 0.0
+			changedSegment = fmt.Sprintf("Relokasi Titik Pengumpan (Feeder): %s", stopName)
+			summary = fmt.Sprintf("Titik %s berjarak ~%.0fm dari Koridor BRT terdekat (Koridor %s, Halte %s). Relokasi ini dievaluasi sebagai simpul pengumpan lokal (feeder/mikrotrans) tanpa mengubah lintasan utama koridor busway.", stopName, nearestStopDist, bestRoute.RouteCode, stops[nearestStopIdx].Name)
+		} else {
+			toBeStops = make([]model.RouteStopItem, len(stops))
+			for i, s := range stops {
+				if i == nearestStopIdx {
+					toBeStops[i] = model.RouteStopItem{
+						Sequence:    i + 1,
+						Name:        fmt.Sprintf("%s (Relokasi)", stopName),
+						Status:      "relocated",
+						IsSimulated: true,
+						Latitude:    lat,
+						Longitude:   lng,
+					}
+				} else {
+					toBeStops[i] = model.RouteStopItem{
+						Sequence:    i + 1,
+						Name:        s.Name,
+						Status:      "existing",
+						IsSimulated: false,
+						Latitude:    s.Latitude,
+						Longitude:   s.Longitude,
+					}
 				}
 			}
+			deltaDist = math.Round(shiftDist)
+			deltaMinutes = math.Round((shiftDist/400.0+0.3)*10) / 10
+			changedSegment = fmt.Sprintf("Relokasi Halte %s → [%s] (geser ~%.0fm)", stops[nearestStopIdx].Name, stopName, shiftDist)
+			summary = fmt.Sprintf("Halte %s direlokasi sejauh ~%.0fm ke titik baru pada Koridor %s (+%.1f mnt waktu tempuh)", stops[nearestStopIdx].Name, shiftDist, bestRoute.RouteCode, deltaMinutes)
 		}
-		shiftDist := nearestStopDist
-		deltaDist = math.Round(shiftDist)
-		deltaMinutes = math.Round((shiftDist/400.0+0.3)*10) / 10
-		changedSegment = fmt.Sprintf("Relokasi Halte %s → [%s] (geser ~%.0fm)", stops[nearestStopIdx].Name, stopName, shiftDist)
-		summary = fmt.Sprintf("Halte %s direlokasi sejauh ~%.0fm ke titik baru pada Koridor %s (+%.1f mnt waktu tempuh)", stops[nearestStopIdx].Name, shiftDist, bestRoute.RouteCode, deltaMinutes)
 
 	case "tutup":
 		toBeStops = make([]model.RouteStopItem, len(stops))
@@ -544,43 +567,52 @@ func (r *SpatialRepository) GenerateRouteComparison(ctx context.Context, lat, ln
 		summary = fmt.Sprintf("Penutupan Halte %s pada Koridor %s menghemat waktu perjalanan ~1.5 menit (layanan ekspres)", stops[nearestStopIdx].Name, bestRoute.RouteCode)
 
 	default: // "tambah"
-		toBeStops = make([]model.RouteStopItem, 0, len(stops)+1)
-		for i := 0; i <= bestSegIdx; i++ {
+		if nearestStopDist > 800.0 || minDetour > 800.0 {
+			// Titik usulan berada jauh di luar lintasan koridor BRT utama
+			toBeStops = asIsStops
+			deltaDist = 0.0
+			deltaMinutes = 0.0
+			changedSegment = fmt.Sprintf("Usulan Halte Pengumpan (Feeder): %s", stopName)
+			summary = fmt.Sprintf("Titik usulan %s berjarak ~%.0fm dari Koridor BRT terdekat (Koridor %s). Direkomendasikan sebagai halte layanan pengumpan (feeder/mikrotrans) yang terintegrasi tanpa membelokkan rute utama koridor BRT.", stopName, nearestStopDist, bestRoute.RouteCode)
+		} else {
+			toBeStops = make([]model.RouteStopItem, 0, len(stops)+1)
+			for i := 0; i <= bestSegIdx; i++ {
+				toBeStops = append(toBeStops, model.RouteStopItem{
+					Sequence:    len(toBeStops) + 1,
+					Name:        stops[i].Name,
+					Status:      "existing",
+					IsSimulated: false,
+					Latitude:    stops[i].Latitude,
+					Longitude:   stops[i].Longitude,
+				})
+			}
+			// Sisipkan halte baru
 			toBeStops = append(toBeStops, model.RouteStopItem{
 				Sequence:    len(toBeStops) + 1,
-				Name:        stops[i].Name,
-				Status:      "existing",
-				IsSimulated: false,
-				Latitude:    stops[i].Latitude,
-				Longitude:   stops[i].Longitude,
+				Name:        stopName,
+				Status:      "added",
+				IsSimulated: true,
+				Latitude:    lat,
+				Longitude:   lng,
 			})
-		}
-		// Sisipkan halte baru
-		toBeStops = append(toBeStops, model.RouteStopItem{
-			Sequence:    len(toBeStops) + 1,
-			Name:        stopName,
-			Status:      "added",
-			IsSimulated: true,
-			Latitude:    lat,
-			Longitude:   lng,
-		})
-		for i := bestSegIdx + 1; i < len(stops); i++ {
-			toBeStops = append(toBeStops, model.RouteStopItem{
-				Sequence:    len(toBeStops) + 1,
-				Name:        stops[i].Name,
-				Status:      "existing",
-				IsSimulated: false,
-				Latitude:    stops[i].Latitude,
-				Longitude:   stops[i].Longitude,
-			})
-		}
+			for i := bestSegIdx + 1; i < len(stops); i++ {
+				toBeStops = append(toBeStops, model.RouteStopItem{
+					Sequence:    len(toBeStops) + 1,
+					Name:        stops[i].Name,
+					Status:      "existing",
+					IsSimulated: false,
+					Latitude:    stops[i].Latitude,
+					Longitude:   stops[i].Longitude,
+				})
+			}
 
-		sBefore := stops[bestSegIdx].Name
-		sAfter := stops[bestSegIdx+1].Name
-		deltaDist = math.Max(120.0, math.Round(minDetour))
-		deltaMinutes = math.Round((deltaDist/350.0+1.2)*10) / 10
-		changedSegment = fmt.Sprintf("%s → [%s] → %s", sBefore, stopName, sAfter)
-		summary = fmt.Sprintf("Halte baru disisipkan antara %s dan %s pada Koridor %s (+%.0fm, +%.1f mnt)", sBefore, sAfter, bestRoute.RouteCode, deltaDist, deltaMinutes)
+			sBefore := stops[bestSegIdx].Name
+			sAfter := stops[bestSegIdx+1].Name
+			deltaDist = math.Max(120.0, math.Round(minDetour))
+			deltaMinutes = math.Round((deltaDist/350.0+1.2)*10) / 10
+			changedSegment = fmt.Sprintf("%s → [%s] → %s", sBefore, stopName, sAfter)
+			summary = fmt.Sprintf("Halte baru disisipkan antara %s dan %s pada Koridor %s (+%.0fm, +%.1f mnt)", sBefore, sAfter, bestRoute.RouteCode, deltaDist, deltaMinutes)
+		}
 	}
 
 	// 5. Bentuk daftar seluruh rute terdampak di sekitar titik
@@ -604,23 +636,31 @@ func (r *SpatialRepository) GenerateRouteComparison(ctx context.Context, lat, ln
 
 	toBeCoords := make([][]float64, 0, len(asIsCoords)+2)
 	switch scenarioType {
+	case "evaluasi", "audit":
+		toBeCoords = asIsCoords
+
 	case "pindah":
-		// Cari titik vertex terdekat dengan halte lama yang direlokasi
-		nearestVertexIdx := 0
-		minDist := math.MaxFloat64
-		oldStop := stops[nearestStopIdx]
-		for i, pt := range asIsCoords {
-			d := haversineDistance(oldStop.Latitude, oldStop.Longitude, pt[1], pt[0])
-			if d < minDist {
-				minDist = d
-				nearestVertexIdx = i
+		shiftDist := nearestStopDist
+		if nearestStopDist > 800.0 || shiftDist < 30.0 {
+			toBeCoords = asIsCoords
+		} else {
+			// Cari titik vertex terdekat dengan halte lama yang direlokasi
+			nearestVertexIdx := 0
+			minDist := math.MaxFloat64
+			oldStop := stops[nearestStopIdx]
+			for i, pt := range asIsCoords {
+				d := haversineDistance(oldStop.Latitude, oldStop.Longitude, pt[1], pt[0])
+				if d < minDist {
+					minDist = d
+					nearestVertexIdx = i
+				}
 			}
-		}
-		for i, pt := range asIsCoords {
-			if i == nearestVertexIdx {
-				toBeCoords = append(toBeCoords, []float64{lng, lat})
-			} else {
-				toBeCoords = append(toBeCoords, pt)
+			for i, pt := range asIsCoords {
+				if i == nearestVertexIdx {
+					toBeCoords = append(toBeCoords, []float64{lng, lat})
+				} else {
+					toBeCoords = append(toBeCoords, pt)
+				}
 			}
 		}
 
@@ -646,25 +686,29 @@ func (r *SpatialRepository) GenerateRouteComparison(ctx context.Context, lat, ln
 		}
 
 	default: // "tambah"
-		// Cari segmen vertex [i, i+1] di asIsCoords yang paling tepat disisipkan titik usulan
-		bestVertexIdx := 0
-		minDetourDist := math.MaxFloat64
-		for i := 0; i < len(asIsCoords)-1; i++ {
-			p1Lng, p1Lat := asIsCoords[i][0], asIsCoords[i][1]
-			p2Lng, p2Lat := asIsCoords[i+1][0], asIsCoords[i+1][1]
-			d1 := haversineDistance(lat, lng, p1Lat, p1Lng)
-			d2 := haversineDistance(lat, lng, p2Lat, p2Lng)
-			d12 := haversineDistance(p1Lat, p1Lng, p2Lat, p2Lng)
-			detour := (d1 + d2) - d12
-			if detour < minDetourDist {
-				minDetourDist = detour
-				bestVertexIdx = i
+		if nearestStopDist > 800.0 || minDetour > 800.0 {
+			toBeCoords = asIsCoords
+		} else {
+			// Cari segmen vertex [i, i+1] di asIsCoords yang paling tepat disisipkan titik usulan
+			bestVertexIdx := 0
+			minDetourDist := math.MaxFloat64
+			for i := 0; i < len(asIsCoords)-1; i++ {
+				p1Lng, p1Lat := asIsCoords[i][0], asIsCoords[i][1]
+				p2Lng, p2Lat := asIsCoords[i+1][0], asIsCoords[i+1][1]
+				d1 := haversineDistance(lat, lng, p1Lat, p1Lng)
+				d2 := haversineDistance(lat, lng, p2Lat, p2Lng)
+				d12 := haversineDistance(p1Lat, p1Lng, p2Lat, p2Lng)
+				detour := (d1 + d2) - d12
+				if detour < minDetourDist {
+					minDetourDist = detour
+					bestVertexIdx = i
+				}
 			}
-		}
-		for i := 0; i < len(asIsCoords); i++ {
-			toBeCoords = append(toBeCoords, asIsCoords[i])
-			if i == bestVertexIdx {
-				toBeCoords = append(toBeCoords, []float64{lng, lat})
+			for i := 0; i < len(asIsCoords); i++ {
+				toBeCoords = append(toBeCoords, asIsCoords[i])
+				if i == bestVertexIdx {
+					toBeCoords = append(toBeCoords, []float64{lng, lat})
+				}
 			}
 		}
 	}
@@ -2869,6 +2913,22 @@ func (r *SpatialRepository) ComputeODTrip(ctx context.Context, origin, dest mode
 			"geometry": map[string]interface{}{
 				"type":        "Point",
 				"coordinates": []float64{proposedStop.Longitude, proposedStop.Latitude},
+			},
+		})
+	} else {
+		// Jika halte eksisting sudah optimal, sertakan to_be_route (identik dengan as_is)
+		// agar peta dapat menampilkan rute optimal hijau yang diverifikasi sistem
+		geoJSONFeatures = append(geoJSONFeatures, map[string]interface{}{
+			"type": "Feature",
+			"properties": map[string]interface{}{
+				"type":  "to_be_route",
+				"color": "#10B981",
+				"dash":  false,
+				"label": "Rute Eksisting Optimal (To-Be = As-Is)",
+			},
+			"geometry": map[string]interface{}{
+				"type":        "LineString",
+				"coordinates": asIsCoords,
 			},
 		})
 	}
