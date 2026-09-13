@@ -29,12 +29,7 @@ const LAYERS = [
 
 export default function PetaSimulasiPage() {
   const router = useRouter();
-  const [isAuthenticated] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return Boolean(localStorage.getItem('user'));
-    }
-    return false;
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInitialPrompt, setChatInitialPrompt] = useState<string | null>(null);
@@ -219,6 +214,7 @@ export default function PetaSimulasiPage() {
       router.push('/login');
       return;
     }
+    setIsAuthenticated(true);
 
     let isMounted = true;
     const loadInitialData = async () => {

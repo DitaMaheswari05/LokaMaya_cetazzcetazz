@@ -6,19 +6,7 @@ import { useState, useEffect } from 'react';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [user] = useState<{name?: string, email?: string} | null>(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        try {
-          return JSON.parse(storedUser);
-        } catch {
-          // ignore
-        }
-      }
-    }
-    return null;
-  });
+  const [user, setUser] = useState<{name?: string, email?: string} | null>(null);
   const [locationName, setLocationName] = useState<string>('Meminta lokasi...');
 
   const requestLocation = () => {
@@ -53,6 +41,15 @@ export default function Navbar() {
   };
 
   useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        // ignore
+      }
+    }
+
     if (typeof window === 'undefined' || !('geolocation' in navigator)) {
       return;
     }
