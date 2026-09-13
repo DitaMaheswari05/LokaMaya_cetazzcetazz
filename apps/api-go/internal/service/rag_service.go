@@ -39,13 +39,13 @@ func (s *RAGService) Search(ctx context.Context, req *model.RAGSearchRequest) (*
 	var docs []model.RegulationDocument
 	var err error
 
-	// 1. Coba embedding semantik via BGE-M3 di ai-service
-	if s.aiClient != nil {
-		embResp, embErr := s.aiClient.Embed(ctx, []string{req.Query})
-		if embErr == nil && len(embResp.Embeddings) > 0 {
-			docs, err = s.regulationRepo.SimilaritySearch(ctx, embResp.Embeddings[0], req.TopK, req.Region)
+	// 1. Coba embedding semantik via Gemini di LiteLLM
+	if s.litellm != nil {
+		embeddings, embErr := s.litellm.Embed(ctx, "text-embedding-004", []string{req.Query})
+		if embErr == nil && len(embeddings) > 0 {
+			docs, err = s.regulationRepo.SimilaritySearch(ctx, embeddings[0], req.TopK, req.Region)
 		} else {
-			// Fallback ke keyword search jika ai-service belum siap
+			// Fallback ke keyword search jika embedding gagal
 			docs, err = s.regulationRepo.SearchByKeyword(ctx, req.Query, req.TopK)
 		}
 	} else {

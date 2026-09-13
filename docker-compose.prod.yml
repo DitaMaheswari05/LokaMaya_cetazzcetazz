@@ -23,6 +23,9 @@ services:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+        - NEXT_PUBLIC_MAPID_API_KEY=${NEXT_PUBLIC_MAPID_API_KEY}
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -43,7 +46,6 @@ services:
       - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-lokamaya}?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
       - OSRM_URL=http://osrm:5000
-      - AI_SERVICE_URL=http://ai-service:8001
       - LITELLM_URL=http://litellm:4000
       - LITELLM_API_KEY=${LITELLM_API_KEY}
       - JWT_SECRET=${JWT_SECRET:-lokamaya-super-secret-key-change-in-production-min-32-chars}
@@ -73,23 +75,6 @@ services:
       - ./infrastructure/docker/litellm/config.yml:/app/config.yaml:ro
     command: ["--config", "/app/config.yaml"]
 
-  # ─── AI Microservice: Python (IndoBERT + BGE-M3) ──────────────────────────
-  ai-service:
-    build:
-      context: ./apps/ai-service
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    environment:
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-BAAI/bge-m3}
-      - EMBEDDING_DEVICE=cpu
-      - CLASSIFICATION_MODEL=indobenchmark/indobert-base-p1
-      - CLASSIFICATION_DEVICE=cpu
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
 
   # ─── Database: PostgreSQL 16 + PostGIS + pgvector ────────────────────────
   postgres:
@@ -118,6 +103,7 @@ services:
       - redis_prod_data:/data
     command: redis-server --appendonly yes
     healthcheck:
+
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
@@ -125,10 +111,12 @@ services:
 
   # ─── Routing: OSRM Foot Profile ──────────────────────────────────────────
   osrm:
-    image: ghcr.io/project-osrm/osrm-backend:latest
+    build:
+      context: .
+      dockerfile: ./infrastructure/docker/osrm/Dockerfile
     restart: unless-stopped
-    volumes:
-      - ./data/spatial:/data:ro
+    ports:
+      - "5000:5000"
 
 volumes:
   postgres_prod_data:

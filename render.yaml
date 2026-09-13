@@ -1,0 +1,60 @@
+services:
+  - type: web
+    name: lokamaya-api
+    env: docker
+    dockerContext: ./apps/api-go
+    dockerfilePath: ./apps/api-go/Dockerfile
+    region: singapore
+    plan: free
+    envVars:
+      - key: GO_API_PORT
+        value: 8080
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lokamaya-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: lokamaya-redis
+          property: connectionString
+      - key: LITELLM_URL
+        value: http://lokamaya-litellm:4000
+      - key: OSRM_URL
+        value: http://lokamaya-osrm:5000
+      - key: LITELLM_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: BCRYPT_COST
+        value: 12
+      - key: JWT_EXPIRY_HOURS
+        value: 24
+  - type: web
+    name: lokamaya-litellm
+    env: docker
+    dockerContext: .
+    dockerfilePath: ./infrastructure/docker/litellm/Dockerfile
+    region: singapore
+    plan: free
+    envVars:
+      - key: LITELLM_MASTER_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_AI_STUDIO_API_KEY
+        sync: false
+
+  - type: web
+    name: lokamaya-osrm
+    env: docker
+    dockerContext: .
+    dockerfilePath: ./infrastructure/docker/osrm/Dockerfile
+    region: singapore
+    plan: free
+
+databases:
+  - name: lokamaya-db
+    databaseName: lokamaya
+    region: singapore
+    plan: free

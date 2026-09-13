@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"lokamaya/api-go/internal/model"
 	"lokamaya/api-go/internal/service"
 )
 
