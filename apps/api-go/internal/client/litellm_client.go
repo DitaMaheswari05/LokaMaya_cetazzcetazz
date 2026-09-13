@@ -82,14 +82,14 @@ type ChatCompletionResponse struct {
 	} `json:"choices"`
 }
 
-// EmbedRequest adalah request body untuk endpoint /v1/embeddings.
-type EmbedRequest struct {
+// LiteLLMEmbedRequest adalah request body untuk endpoint /v1/embeddings.
+type LiteLLMEmbedRequest struct {
 	Model string   `json:"model"`
 	Input []string `json:"input"`
 }
 
-// EmbedResponse adalah respons dari endpoint /v1/embeddings.
-type EmbedResponse struct {
+// LiteLLMEmbedResponse adalah respons dari endpoint /v1/embeddings.
+type LiteLLMEmbedResponse struct {
 	Data []struct {
 		Embedding []float32 `json:"embedding"`
 	} `json:"data"`
@@ -170,12 +170,12 @@ func (c *LiteLLMClient) Embed(ctx context.Context, model string, input []string)
 	if model == "" {
 		model = "text-embedding-004"
 	}
-	req := EmbedRequest{
+	req := LiteLLMEmbedRequest{
 		Model: model,
 		Input: input,
 	}
 
-	var resp EmbedResponse
+	var resp LiteLLMEmbedResponse
 	err := c.postJSON(ctx, "/v1/embeddings", req, &resp)
 	if err == nil && len(resp.Data) > 0 {
 		var embeddings [][]float32
