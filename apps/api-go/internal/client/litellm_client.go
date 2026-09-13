@@ -82,6 +82,19 @@ type ChatCompletionResponse struct {
 	} `json:"choices"`
 }
 
+// EmbedRequest adalah request body untuk endpoint /v1/embeddings.
+type EmbedRequest struct {
+	Model string   `json:"model"`
+	Input []string `json:"input"`
+}
+
+// EmbedResponse adalah respons dari endpoint /v1/embeddings.
+type EmbedResponse struct {
+	Data []struct {
+		Embedding []float32 `json:"embedding"`
+	} `json:"data"`
+}
+
 // DefaultModel adalah model Gemini default aktif
 const DefaultModel = "gemini-flash-lite-latest"
 
@@ -150,6 +163,39 @@ func (c *LiteLLMClient) ChatWithTools(ctx context.Context, model string, message
 		return nil, fmt.Errorf("litellm tools error: %w", err)
 	}
 	return nil, fmt.Errorf("tidak ada respons dari LiteLLM")
+}
+
+// Embed mengirim request ke endpoint /v1/embeddings.
+func (c *LiteLLMClient) Embed(ctx context.Context, model string, input []string) ([][]float32, error) {
+	if model == "" {
+		model = "text-embedding-004"
+	}
+	req := EmbedRequest{
+		Model: model,
+		Input: input,
+	}
+
+	var resp EmbedResponse
+	err := c.postJSON(ctx, "/v1/embeddings", req, &resp)
+	if err == nil && len(resp.Data) > 0 {
+		var embeddings [][]float32
+		for _, d := range resp.Data {
+			embeddings = append(embeddings, d.Embedding)
+		}
+		return embeddings, nil
+	}
+
+	// Direct fallback
+	if c.geminiKey != "" {
+		if direct, dirErr := c.callGeminiEmbedDirect(ctx, model, input); dirErr == nil && len(direct) > 0 {
+			return direct, nil
+		}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("litellm embed error: %w", err)
+	}
+	return nil, fmt.Errorf("tidak ada response embedding dari LiteLLM")
 }
 
 // DefaultTools mengembalikan definisi tool PRD LokaMaya untuk Agentic Tool Calling.
@@ -465,4 +511,71 @@ func (c *LiteLLMClient) callGeminiDirect(ctx context.Context, messages []ChatMes
 	}
 
 	return "", fmt.Errorf("empty candidates from gemini direct")
+}
+
+// ─── Direct Google AI Studio Gemini API Embedding Fallback ───────────────
+
+type geminiEmbedReq struct {
+	Content geminiContentItem `json:"content"`
+}
+
+type geminiBatchEmbedReq struct {
+	Requests []geminiEmbedReq `json:"requests"`
+}
+
+type geminiEmbedResp struct {
+	Embeddings []struct {
+		Values []float32 `json:"values"`
+	} `json:"embeddings"`
+}
+
+func (c *LiteLLMClient) callGeminiEmbedDirect(ctx context.Context, model string, texts []string) ([][]float32, error) {
+	if c.geminiKey == "" {
+		return nil, fmt.Errorf("gemini API key is empty")
+	}
+
+	var requests []geminiEmbedReq
+	for _, text := range texts {
+		requests = append(requests, geminiEmbedReq{
+			Content: geminiContentItem{
+				Parts: []geminiPart{{Text: text}},
+			},
+		})
+	}
+
+	body := geminiBatchEmbedReq{Requests: requests}
+	b, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:batchEmbedContents?key=%s", model, c.geminiKey)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(b))
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	httpResp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		var errBuf bytes.Buffer
+		_, _ = errBuf.ReadFrom(httpResp.Body)
+		return nil, fmt.Errorf("gemini embed error status %d: %s", httpResp.StatusCode, errBuf.String())
+	}
+
+	var gResp geminiEmbedResp
+	if err := json.NewDecoder(httpResp.Body).Decode(&gResp); err != nil {
+		return nil, err
+	}
+
+	var embeddings [][]float32
+	for _, e := range gResp.Embeddings {
+		embeddings = append(embeddings, e.Values)
+	}
+	return embeddings, nil
 }

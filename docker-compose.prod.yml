@@ -46,7 +46,6 @@ services:
       - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-lokamaya}?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
       - OSRM_URL=http://osrm:5000
-      - AI_SERVICE_URL=http://ai-service:8001
       - LITELLM_URL=http://litellm:4000
       - LITELLM_API_KEY=${LITELLM_API_KEY}
       - JWT_SECRET=${JWT_SECRET:-lokamaya-super-secret-key-change-in-production-min-32-chars}
@@ -76,23 +75,6 @@ services:
       - ./infrastructure/docker/litellm/config.yml:/app/config.yaml:ro
     command: ["--config", "/app/config.yaml"]
 
-  # ─── AI Microservice: Python (IndoBERT + BGE-M3) ──────────────────────────
-  ai-service:
-    build:
-      context: ./apps/ai-service
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    environment:
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-BAAI/bge-m3}
-      - EMBEDDING_DEVICE=cpu
-      - CLASSIFICATION_MODEL=indobenchmark/indobert-base-p1
-      - CLASSIFICATION_DEVICE=cpu
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
 
   # ─── Database: PostgreSQL 16 + PostGIS + pgvector ────────────────────────
   postgres:

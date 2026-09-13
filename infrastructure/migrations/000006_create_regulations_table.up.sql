@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS regulations (
     content     TEXT NOT NULL,
     source      VARCHAR(255) NOT NULL,
     region      VARCHAR(100) DEFAULT 'DKI Jakarta',
-    embedding   vector(1024), -- BGE-M3 menghasilkan vektor 1024 dimensi
+    embedding   vector(768), -- Gemini Text Embedding menghasilkan vektor 768 dimensi
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

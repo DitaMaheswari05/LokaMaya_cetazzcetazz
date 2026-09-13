@@ -35,6 +35,12 @@ model_list:
       rpm: 2000
       tpm: 2000000
       timeout: 10
+  - model_name: text-embedding-004
+    litellm_params:
+      model: gemini/text-embedding-004
+      api_key: "os.environ/GEMINI_API_KEY"
+      rpm: 1500
+      timeout: 15
   - model_name: gemini-1.5-flash
     litellm_params:
       model: gemini/gemini-flash-lite-latest
