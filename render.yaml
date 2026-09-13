@@ -5,7 +5,7 @@ services:
     dockerContext: ./apps/api-go
     dockerfilePath: ./apps/api-go/Dockerfile
     region: singapore
-    plan: starter
+    plan: free
     envVars:
       - key: GO_API_PORT
         value: 8080
