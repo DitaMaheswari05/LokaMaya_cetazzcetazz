@@ -56,13 +56,30 @@ func (c *OSRMClient) GetProfileRoute(ctx context.Context, profile string, origin
 		profile = "driving"
 	}
 
-	urls := []string{
-		fmt.Sprintf("%s/route/v1/%s/%f,%f;%f,%f?overview=full&geometries=geojson",
-			c.baseURL, profile, originLng, originLat, destLng, destLat),
-	}
-	if c.baseURL != "https://router.project-osrm.org" {
-		urls = append(urls, fmt.Sprintf("https://router.project-osrm.org/route/v1/%s/%f,%f;%f,%f?overview=full&geometries=geojson",
-			profile, originLng, originLat, destLng, destLat))
+	var urls []string
+	if profile == "foot" {
+		// 1. Jika baseURL internal/lokal aktif (misal container OSRM mandiri)
+		if c.baseURL != "" && c.baseURL != "https://router.project-osrm.org" {
+			urls = append(urls, fmt.Sprintf("%s/route/v1/foot/%f,%f;%f,%f?overview=full&geometries=geojson",
+				c.baseURL, originLng, originLat, destLng, destLat))
+		}
+		// 2. Official OpenStreetMap Routed-Foot Server (FOSSGIS e.V.): Rute jalan kaki asli (trotoar, zebra cross, pedestrian path, kecepatan jalan kaki ~4.5 km/h)
+		urls = append(urls, fmt.Sprintf("https://routing.openstreetmap.de/routed-foot/route/v1/foot/%f,%f;%f,%f?overview=full&geometries=geojson",
+			originLng, originLat, destLng, destLat))
+		// 3. Fallback alternatif
+		urls = append(urls, fmt.Sprintf("https://router.project-osrm.org/route/v1/foot/%f,%f;%f,%f?overview=full&geometries=geojson",
+			originLng, originLat, destLng, destLat))
+	} else {
+		// Profil 'driving' atau kendaraan
+		urls = append(urls, fmt.Sprintf("%s/route/v1/%s/%f,%f;%f,%f?overview=full&geometries=geojson",
+			c.baseURL, profile, originLng, originLat, destLng, destLat))
+		if c.baseURL != "https://router.project-osrm.org" {
+			urls = append(urls, fmt.Sprintf("https://router.project-osrm.org/route/v1/%s/%f,%f;%f,%f?overview=full&geometries=geojson",
+				profile, originLng, originLat, destLng, destLat))
+		}
+		// Fallback cadangan router mobil
+		urls = append(urls, fmt.Sprintf("https://routing.openstreetmap.de/routed-car/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson",
+			originLng, originLat, destLng, destLat))
 	}
 
 	var lastErr error
@@ -119,6 +136,7 @@ func (c *OSRMClient) GetNearest(ctx context.Context, lat, lng float64) (float64,
 	if c.baseURL != "https://router.project-osrm.org" {
 		urls = append(urls, fmt.Sprintf("https://router.project-osrm.org/nearest/v1/driving/%f,%f", lng, lat))
 	}
+	urls = append(urls, fmt.Sprintf("https://routing.openstreetmap.de/routed-car/nearest/v1/driving/%f,%f", lng, lat))
 
 	var lastErr error
 	for _, targetURL := range urls {
