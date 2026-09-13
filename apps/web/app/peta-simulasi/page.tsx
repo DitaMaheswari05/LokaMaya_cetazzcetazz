@@ -11,7 +11,7 @@ import { UrbanCouncilCard } from '@/components/UrbanCouncilCard';
 import { PolicyBriefModal } from '@/components/PolicyBriefModal';
 import { BehavioralRippleCard } from '@/components/BehavioralRippleCard';
 import { SelectedStopDetail } from '@/components/Map';
-import { Search, Menu, Loader2, Sparkles, X, AlertTriangle, FileText, Compass, Users, Activity, Sparkle, Minus, ChevronUp, Bus, Filter, ArrowRightLeft, Navigation, Zap, BarChart3, CheckCircle2, Footprints, Clock, ArrowRight, RotateCcw } from 'lucide-react';
+import { Search, Menu, Loader2, Sparkles, X, AlertTriangle, FileText, Compass, Users, Activity, Sparkle, Minus, ChevronUp, Bus, Filter, ArrowRightLeft, Navigation, Zap, BarChart3, CheckCircle2, Footprints, Clock, ArrowRight, RotateCcw, Shuffle } from 'lucide-react';
 
 const MapComponent = dynamic(() => import('@/components/Map'), {
   ssr: false,

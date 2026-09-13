@@ -2598,6 +2598,9 @@ func (r *SpatialRepository) ComputeODTrip(ctx context.Context, origin, dest mode
 		publicNote = proposedStop.PublicInterestContext
 	}
 
+	asIsTransitMinutes := int(math.Max(8, math.Round(directDist/300.0)))
+	var asIsSteps []model.JourneyStep
+
 	routeA := cleanRouteDisplay(origStop.Corridor)
 	if len(origStop.Routes) > 0 {
 		routeA = cleanRouteDisplay(origStop.Routes[0])
