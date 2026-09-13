@@ -47,7 +47,7 @@ function extractLocationsFromText(content: string): ExtractedLocation[] {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    const titleMatch = line.match(/(?:🥇|🥈|🥉)?\s*(Kandidat[^\n*:(]+|Halte[^\n*:(]+)/i);
+    const titleMatch = line.match(/(?:)?\s*(Kandidat[^\n*:(]+|Halte[^\n*:(]+)/i);
     if (titleMatch) {
       currentTitle = titleMatch[1].trim();
     }
@@ -335,7 +335,7 @@ export default function ChatWidget({
             {originLocation && destinationLocation ? (
               <div className="flex items-center gap-1.5 mt-0.5 bg-white/15 px-2 py-0.5 rounded-full w-fit">
                 <span className="text-[10px] text-white/90 font-bold truncate max-w-[210px] flex items-center gap-1">
-                  <span>📍 A → 🏁 B (Mode Rute)</span>
+                  <span> A →  B (Mode Rute)</span>
                 </span>
                 {onClearODLocations && (
                   <button
@@ -363,7 +363,7 @@ export default function ChatWidget({
                   title="Klik untuk pusatkan peta ke titik ini"
                   className="text-[10px] text-white/90 hover:text-white font-medium truncate max-w-[190px] flex items-center gap-1 hover:underline cursor-pointer"
                 >
-                  <span>📌 {contextLocation.stop_name || `${contextLocation.latitude.toFixed(4)}, ${contextLocation.longitude.toFixed(4)}`}</span>
+                  <span> {contextLocation.stop_name || `${contextLocation.latitude.toFixed(4)}, ${contextLocation.longitude.toFixed(4)}`}</span>
                 </button>
                 {onClearContextLocation && (
                   <button
@@ -476,7 +476,7 @@ export default function ChatWidget({
                         </span>
                       </div>
                       <p className="text-[11px] text-[#1A1832] font-semibold leading-tight">
-                        📍 {m.simulation.stop_name}
+                         {m.simulation.stop_name}
                       </p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <button
@@ -523,7 +523,7 @@ export default function ChatWidget({
                         </div>
 
                         <p className="text-[11px] text-[#1A1832] font-semibold leading-tight">
-                          📍 {m.odTrip.origin.name || 'Titik A'} → 🏁 {m.odTrip.destination.name || 'Titik B'}
+                           {m.odTrip.origin.name || 'Titik A'} →  {m.odTrip.destination.name || 'Titik B'}
                         </p>
 
                         {/* Diagnosis Banner */}
@@ -808,10 +808,10 @@ export default function ChatWidget({
             )}
             <div className="flex flex-wrap gap-1.5">
               {(suggestions.length > 0 ? suggestions : (messages.length <= 1 ? [
-                "🚦 Analisis bottleneck perjalanan dari Titik A ke Titik B",
-                "🚶 Cek jangkauan 5 & 10 menit jalan kaki (walkability)",
-                "🏪 Potensi integrasi halte dengan UMKM sekitar",
-                "🌧️ Evaluasi resiliensi halte terhadap risiko banjir",
+                " Analisis bottleneck perjalanan dari Titik A ke Titik B",
+                " Cek jangkauan 5 & 10 menit jalan kaki (walkability)",
+                " Potensi integrasi halte dengan UMKM sekitar",
+                " Evaluasi resiliensi halte terhadap risiko banjir",
               ] : [])).map((s, idx) => (
                 <button
                   key={idx}

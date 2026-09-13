@@ -962,7 +962,7 @@ export default function MapComponent({
           const isRank1 = c.rank === 1;
           const isRank2 = c.rank === 2;
           const badgeBg = isRank1 ? 'bg-amber-500 text-white border-amber-300' : isRank2 ? 'bg-slate-500 text-white border-slate-300' : 'bg-amber-800 text-white border-amber-600';
-          const icon = isRank1 ? '🥇' : isRank2 ? '🥈' : '🥉';
+          const icon = isRank1 ? '' : isRank2 ? '' : '';
 
           return (
             <Marker

@@ -25,12 +25,12 @@ export const UrbanCouncilCard: React.FC<UrbanCouncilCardProps> = ({ deliberation
   // Persona icons & avatar badge colors
   const getPersonaBadge = (persona: string) => {
     if (persona.includes('Rina')) {
-      return { label: 'Warga', bg: 'bg-indigo-600', icon: '👩' };
+      return { label: 'Warga', bg: 'bg-indigo-600', icon: '' };
     }
     if (persona.includes('Siti')) {
-      return { label: 'UMKM', bg: 'bg-amber-600', icon: '🏪' };
+      return { label: 'UMKM', bg: 'bg-amber-600', icon: '' };
     }
-    return { label: 'Dishub', bg: 'bg-blue-700', icon: '👔' };
+    return { label: 'Dishub', bg: 'bg-blue-700', icon: '' };
   };
 
   const getStancePill = (stance: string) => {

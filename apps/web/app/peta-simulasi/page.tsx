@@ -299,7 +299,7 @@ export default function PetaSimulasiPage() {
       setIsChatOpen(true);
       setSearchQuery('');
       setIsSearching(false);
-      showToast('💬 Mengarahkan permintaan ke Asisten AI...');
+      showToast(' Mengarahkan permintaan ke Asisten AI...');
       return;
     }
 
@@ -313,7 +313,7 @@ export default function PetaSimulasiPage() {
         setTargetLocation({ latitude: lat, longitude: lng, zoom: 16, pitch: 25 });
         setSelectedLocation({ latitude: lat, longitude: lng });
         setIsSearching(false);
-        showToast(`📍 Menuju koordinat: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        showToast(` Menuju koordinat: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
         return;
       }
     }
@@ -353,7 +353,7 @@ export default function PetaSimulasiPage() {
           sub_type: typeof p?.sub_type === 'string' ? p.sub_type : undefined,
         });
         setIsSearching(false);
-        showToast(`🚏 Halte ditemukan: ${matchStop.properties.name}`);
+        showToast(` Halte ditemukan: ${matchStop.properties.name}`);
         return;
       }
     }
@@ -367,7 +367,7 @@ export default function PetaSimulasiPage() {
         const lng = parseFloat(data[0].lon);
         setTargetLocation({ latitude: lat, longitude: lng, zoom: 16, pitch: 25 });
         setSelectedLocation({ latitude: lat, longitude: lng });
-        showToast(`🔍 Menuju: ${data[0].display_name.split(',')[0]}`);
+        showToast(` Menuju: ${data[0].display_name.split(',')[0]}`);
       } else {
         alert("Lokasi tidak ditemukan");
       }
@@ -394,7 +394,7 @@ export default function PetaSimulasiPage() {
       const dist = Math.round(R * c);
 
       if (dist < 20) {
-        showToast("⚠️ Titik baru terlalu dekat dengan halte asal (< 20m). Silakan pilih titik lain di sekitarnya.");
+        showToast(" Titik baru terlalu dekat dengan halte asal (< 20m). Silakan pilih titik lain di sekitarnya.");
         return;
       }
 
@@ -408,7 +408,7 @@ export default function PetaSimulasiPage() {
       setSimulationResult(null);
       setIsochroneData(null);
       setIsSimulationMinimized(false);
-      showToast(`🔄 Menjalankan simulasi relokasi ${sourceStop.name} (geser ~${dist}m)...`);
+      showToast(` Menjalankan simulasi relokasi ${sourceStop.name} (geser ~${dist}m)...`);
       handleRunRelocationSimulation(sourceStop.name, evt.lngLat.lat, evt.lngLat.lng, dist);
       return;
     }
@@ -421,10 +421,10 @@ export default function PetaSimulasiPage() {
       });
       if (!destinationLocation) {
         setTripPickTarget('destination');
-        showToast(`📍 Titik Awal (A) diset. Sekarang klik titik tujuan (B).`);
+        showToast(` Titik Awal (A) diset. Sekarang klik titik tujuan (B).`);
       } else {
         setTripPickTarget(null);
-        showToast(`📍 Titik Awal (A) diset: ${evt.lngLat.lat.toFixed(4)}, ${evt.lngLat.lng.toFixed(4)}`);
+        showToast(` Titik Awal (A) diset: ${evt.lngLat.lat.toFixed(4)}, ${evt.lngLat.lng.toFixed(4)}`);
       }
       return;
     }
@@ -436,7 +436,7 @@ export default function PetaSimulasiPage() {
         name: `Titik B (${evt.lngLat.lat.toFixed(3)}, ${evt.lngLat.lng.toFixed(3)})`,
       });
       setTripPickTarget(null);
-      showToast(`🏁 Titik Tujuan (B) diset: ${evt.lngLat.lat.toFixed(4)}, ${evt.lngLat.lng.toFixed(4)}. Siap dianalisis!`);
+      showToast(` Titik Tujuan (B) diset: ${evt.lngLat.lat.toFixed(4)}, ${evt.lngLat.lng.toFixed(4)}. Siap dianalisis!`);
       return;
     }
 
@@ -448,7 +448,7 @@ export default function PetaSimulasiPage() {
     setSimulationResult(null);
     setIsochroneData(null);
     setIsSimulationMinimized(false);
-    showToast(`📍 Titik dipilih: ${evt.lngLat.lat.toFixed(4)}, ${evt.lngLat.lng.toFixed(4)}`);
+    showToast(` Titik dipilih: ${evt.lngLat.lat.toFixed(4)}, ${evt.lngLat.lng.toFixed(4)}`);
   };
 
   const handleRunODAnalysis = async () => {
@@ -459,7 +459,7 @@ export default function PetaSimulasiPage() {
 
     setIsAnalyzingOD(true);
     try {
-      showToast("🔍 Menganalisis bottleneck & simulasi komuter As-Is vs To-Be...");
+      showToast(" Menganalisis bottleneck & simulasi komuter As-Is vs To-Be...");
       const res = await apiClient.analyzeODTrip(originLocation, destinationLocation);
 
       // Client-side guarantee: Pastikan polyline rute selalu mengikuti bentuk jaringan jalan riil
@@ -514,7 +514,7 @@ export default function PetaSimulasiPage() {
       setOdTripResult(enhancedResult);
       setIsOdTripMinimized(false);
       focusCameraOnOD(enhancedResult);
-      showToast(`✅ Analisis tuntas: Bottleneck ${res.bottleneck.severity}!`);
+      showToast(` Analisis tuntas: Bottleneck ${res.bottleneck.severity}!`);
     } catch (err: unknown) {
       console.error("OD analysis error:", err);
       const errMsg = err instanceof Error ? err.message : 'Terjadi kesalahan';
@@ -622,7 +622,7 @@ export default function PetaSimulasiPage() {
           .then(iso => setIsochroneData(iso))
           .catch(() => {});
 
-        showToast(`🎯 Koridor ${corridorName}: 3 Titik Pareto ditemukan. Peta diarahkan ke Pilihan Warga.`);
+        showToast(` Koridor ${corridorName}: 3 Titik Pareto ditemukan. Peta diarahkan ke Pilihan Warga.`);
       } else {
         alert("Tidak ditemukan titik optimal di koridor ini.");
       }
@@ -687,7 +687,7 @@ export default function PetaSimulasiPage() {
                         <button
                           onClick={() => {
                             setStopFilter('brt');
-                            showToast('🚏 Menampilkan Halte BRT Utama (306 titik)');
+                            showToast(' Menampilkan Halte BRT Utama (306 titik)');
                           }}
                           className={`py-1 text-[10px] font-bold rounded-md transition-all text-center cursor-pointer ${
                             stopFilter === 'brt'
@@ -701,7 +701,7 @@ export default function PetaSimulasiPage() {
                         <button
                           onClick={() => {
                             setStopFilter('all');
-                            showToast('🚏 Menampilkan Semua Halte (6.756 titik)');
+                            showToast(' Menampilkan Semua Halte (6.756 titik)');
                           }}
                           className={`py-1 text-[10px] font-bold rounded-md transition-all text-center cursor-pointer ${
                             stopFilter === 'all'
@@ -715,7 +715,7 @@ export default function PetaSimulasiPage() {
                         <button
                           onClick={() => {
                             setStopFilter('feeder');
-                            showToast('🚏 Menampilkan Halte Feeder Non-BRT');
+                            showToast(' Menampilkan Halte Feeder Non-BRT');
                           }}
                           className={`py-1 text-[10px] font-bold rounded-md transition-all text-center cursor-pointer ${
                             stopFilter === 'feeder'
@@ -775,7 +775,7 @@ export default function PetaSimulasiPage() {
                     if (!layersData['rute']) fetchLayerData('rute');
                   }
                   if (code) {
-                    showToast(`🚌 Sorot Koridor ${code}`);
+                    showToast(` Sorot Koridor ${code}`);
                   }
                 }}
                 className="w-full bg-[#F4F4FA] border border-[#E2E2EF] rounded-xl px-2.5 py-1.5 text-[11.5px] font-medium text-[#1A1832] outline-none cursor-pointer focus:border-[#2D2A70]"
@@ -864,7 +864,7 @@ export default function PetaSimulasiPage() {
                 setActiveLayers(prev => ({ ...prev, rute: true }));
                 if (!layersData['rute']) fetchLayerData('rute');
               }
-              if (code) showToast(`🚌 Sorot Koridor ${code}`);
+              if (code) showToast(` Sorot Koridor ${code}`);
             }}
             cursor={tripPickTarget || relocationSourceStop ? 'crosshair' : 'default'}
             onSelectCandidate={(c) => {
@@ -880,7 +880,7 @@ export default function PetaSimulasiPage() {
               apiClient.getIsochrone(c.latitude, c.longitude)
                 .then(iso => setIsochroneData(iso))
                 .catch(() => {});
-              showToast(`🎯 Fokus ke ${c.title}`);
+              showToast(` Fokus ke ${c.title}`);
             }}
             selectedStop={selectedStop}
             onSelectStop={setSelectedStop}
@@ -890,35 +890,35 @@ export default function PetaSimulasiPage() {
               setSelectedLocation({ latitude: stop.lat, longitude: stop.lng });
               setTargetLocation({ latitude: stop.lat, longitude: stop.lng, zoom: 16, pitch: 25 });
               apiClient.getIsochrone(stop.lat, stop.lng).then(iso => setIsochroneData(iso)).catch(() => {});
-              showToast(`📊 Halte ${stop.name} dipilih untuk evaluasi performa`);
+              showToast(` Halte ${stop.name} dipilih untuk evaluasi performa`);
             }}
             onAskAiAboutStop={(stop) => {
               setSelectedStop(stop);
               setSelectedLocation({ latitude: stop.lat, longitude: stop.lng });
               setChatInitialPrompt(`Bagaimana performa jangkauan pedestrian dan integrasi koridor Halte ${stop.name} saat ini?`);
               setIsChatOpen(true);
-              showToast(`💬 Asisten AI siap menganalisis Halte ${stop.name}`);
+              showToast(` Asisten AI siap menganalisis Halte ${stop.name}`);
             }}
             onMoveStop={(stop) => {
               setRelocationSourceStop(stop);
               setSelectedStop(stop);
               setSelectedLocation(null);
               setTargetLocation({ latitude: stop.lat, longitude: stop.lng, zoom: 16, pitch: 25 });
-              showToast(`🔄 Mode Relokasi Aktif: Silakan klik lokasi baru di peta untuk memindahkan Halte ${stop.name}`);
+              showToast(` Mode Relokasi Aktif: Silakan klik lokasi baru di peta untuk memindahkan Halte ${stop.name}`);
             }}
             onSetAsOrigin={(loc) => {
               setOriginLocation(loc);
               if (!destinationLocation) {
                 setTripPickTarget('destination');
-                showToast(`📍 Titik A (Asal) diset: ${loc.name}. Klik titik lain untuk menentukan Titik B (Tujuan).`);
+                showToast(` Titik A (Asal) diset: ${loc.name}. Klik titik lain untuk menentukan Titik B (Tujuan).`);
               } else {
-                showToast(`📍 Titik A (Asal) diset: ${loc.name}`);
+                showToast(` Titik A (Asal) diset: ${loc.name}`);
               }
             }}
             onSetAsDestination={(loc) => {
               setDestinationLocation(loc);
               setTripPickTarget(null);
-              showToast(`🏁 Titik B (Tujuan) diset: ${loc.name}`);
+              showToast(` Titik B (Tujuan) diset: ${loc.name}`);
             }}
             onClick={handleMapClick}
           />
@@ -939,14 +939,14 @@ export default function PetaSimulasiPage() {
                   </span>
                 </div>
                 <span className="text-[11px] text-white/95 mt-0.5">
-                  🎯 Klik lokasi baru di peta tempat halte ini ingin dipindahkan
+                   Klik lokasi baru di peta tempat halte ini ingin dipindahkan
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => {
                   setRelocationSourceStop(null);
-                  showToast("❌ Mode relokasi dibatalkan");
+                  showToast(" Mode relokasi dibatalkan");
                 }}
                 className="ml-auto px-3 py-1 bg-white/20 hover:bg-white/30 text-white rounded-xl text-[11px] font-bold transition-all cursor-pointer shrink-0 border border-white/20"
               >
@@ -1009,7 +1009,7 @@ export default function PetaSimulasiPage() {
                 type="button"
                 onClick={() => {
                   setTripPickTarget('origin');
-                  showToast('📍 Klik peta untuk memilih Titik Asal (A)');
+                  showToast(' Klik peta untuk memilih Titik Asal (A)');
                 }}
                 className={`px-2.5 py-1 rounded-xl border flex items-center gap-2 cursor-pointer transition-all text-left ${
                   tripPickTarget === 'origin'
@@ -1056,7 +1056,7 @@ export default function PetaSimulasiPage() {
                 type="button"
                 onClick={() => {
                   setTripPickTarget('destination');
-                  showToast('🏁 Klik peta untuk memilih Titik Tujuan (B)');
+                  showToast(' Klik peta untuk memilih Titik Tujuan (B)');
                 }}
                 className={`px-2.5 py-1 rounded-xl border flex items-center gap-2 cursor-pointer transition-all text-left ${
                   tripPickTarget === 'destination'
@@ -1089,7 +1089,7 @@ export default function PetaSimulasiPage() {
                 ) : (
                   <Zap className="w-3.5 h-3.5 text-[#ED6B23]" />
                 )}
-                <span>{isAnalyzingOD ? 'Menganalisis...' : '⚡ Analisis Bottleneck AI'}</span>
+                <span>{isAnalyzingOD ? 'Menganalisis...' : ' Analisis Bottleneck AI'}</span>
               </button>
 
               {/* Tanya AI Bottleneck */}
@@ -1116,7 +1116,7 @@ export default function PetaSimulasiPage() {
                   setDestinationLocation(null);
                   setOdTripResult(null);
                   setTripPickTarget(null);
-                  showToast('🔄 Rute perjalanan direset');
+                  showToast(' Rute perjalanan direset');
                 }}
                 className="px-2 py-1 text-[10.5px] font-semibold text-gray-500 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
                 title="Hapus rute A dan B"
@@ -1180,7 +1180,7 @@ export default function PetaSimulasiPage() {
               <button
                 onClick={() => {
                   setStopFilter('brt');
-                  showToast('🚏 Menampilkan Halte BRT Utama (306 titik)');
+                  showToast(' Menampilkan Halte BRT Utama (306 titik)');
                 }}
                 className={`px-2.5 py-1 text-[10.5px] font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                   stopFilter === 'brt'
@@ -1194,7 +1194,7 @@ export default function PetaSimulasiPage() {
               <button
                 onClick={() => {
                   setStopFilter('all');
-                  showToast('🚏 Menampilkan Semua Halte (6.756 titik)');
+                  showToast(' Menampilkan Semua Halte (6.756 titik)');
                 }}
                 className={`px-2.5 py-1 text-[10.5px] font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                   stopFilter === 'all'
@@ -1208,7 +1208,7 @@ export default function PetaSimulasiPage() {
               <button
                 onClick={() => {
                   setStopFilter('feeder');
-                  showToast('🚏 Menampilkan Halte Feeder Non-BRT');
+                  showToast(' Menampilkan Halte Feeder Non-BRT');
                 }}
                 className={`px-2.5 py-1 text-[10.5px] font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                   stopFilter === 'feeder'
@@ -1261,7 +1261,7 @@ export default function PetaSimulasiPage() {
                       apiClient.getIsochrone(cand.latitude, cand.longitude)
                         .then(iso => setIsochroneData(iso))
                         .catch(() => {});
-                      showToast(`🎯 Peta diarahkan ke ${cand.title}`);
+                      showToast(` Peta diarahkan ke ${cand.title}`);
                     }}
                     className={`px-2.5 py-1 rounded-lg text-[10.5px] font-semibold transition-all whitespace-nowrap cursor-pointer ${
                       simulationResult?.stop_name === cand.title
@@ -1269,7 +1269,7 @@ export default function PetaSimulasiPage() {
                         : 'bg-[#F4F4FA] text-[#1A1832] hover:bg-gray-200 border border-[#E2E2EF]'
                     }`}
                   >
-                    {idx === 0 ? '🥇 Warga' : idx === 1 ? '🥈 UMKM' : '🥉 Resilien'}: {cand.title.split('(')[0].replace('Kandidat ', '')} ({cand.simulation_result.walk_accessibility?.score || 0})
+                    {idx === 0 ? ' Warga' : idx === 1 ? ' UMKM' : ' Resilien'}: {cand.title.split('(')[0].replace('Kandidat ', '')} ({cand.simulation_result.walk_accessibility?.score || 0})
                   </button>
                 ))}
               </div>
@@ -1429,7 +1429,7 @@ export default function PetaSimulasiPage() {
                   {/* Public interest note */}
                   {odTripResult.proposed_stop.public_interest_context && (
                     <div className="mt-0.5 p-2 bg-emerald-100/70 border border-emerald-200/70 rounded-lg text-[9.5px] text-emerald-950 font-medium leading-relaxed flex items-start gap-1.5">
-                      <span className="font-bold shrink-0">⚖️ Pertimbangan Publik:</span>
+                      <span className="font-bold shrink-0"> Pertimbangan Publik:</span>
                       <span>{odTripResult.proposed_stop.public_interest_context}</span>
                     </div>
                   )}
@@ -1470,7 +1470,7 @@ export default function PetaSimulasiPage() {
                   </div>
                   {odTripResult.proposed_stop.public_interest_context && (
                     <div className="p-2 bg-indigo-100/70 border border-indigo-200/70 rounded-lg text-[9.5px] text-indigo-950 font-medium leading-relaxed flex items-start gap-1.5">
-                      <span className="font-bold shrink-0">⚖️ Keseimbangan Koridor:</span>
+                      <span className="font-bold shrink-0"> Keseimbangan Koridor:</span>
                       <span>{odTripResult.proposed_stop.public_interest_context}</span>
                     </div>
                   )}
@@ -1491,7 +1491,7 @@ export default function PetaSimulasiPage() {
                   </div>
                   {odTripResult.proposed_stop.public_interest_context && (
                     <div className="p-2 bg-[#ED6B23]/10 border border-[#ED6B23]/20 rounded-lg text-[9.5px] text-[#1A1832] font-medium leading-relaxed flex items-start gap-1.5">
-                      <span className="font-bold shrink-0">⚖️ Standar Teknis:</span>
+                      <span className="font-bold shrink-0"> Standar Teknis:</span>
                       <span>{odTripResult.proposed_stop.public_interest_context}</span>
                     </div>
                   )}
@@ -1648,7 +1648,7 @@ export default function PetaSimulasiPage() {
                     setOriginLocation(null);
                     setDestinationLocation(null);
                     setOdTripResult(null);
-                    showToast('🔄 Rute perjalanan direset');
+                    showToast(' Rute perjalanan direset');
                   }}
                   className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition-colors cursor-pointer"
                   title="Reset rute komuter"
@@ -1917,7 +1917,7 @@ export default function PetaSimulasiPage() {
                     setChatInitialPrompt(`Tolong analisis potensi dan kebutuhan halte transportasi umum di titik koordinat ${selectedLocation.latitude.toFixed(4)}, ${selectedLocation.longitude.toFixed(4)}.`);
                   }
                   setIsChatOpen(true);
-                  showToast('💬 Mengajukan pertanyaan ke Asisten AI...');
+                  showToast(' Mengajukan pertanyaan ke Asisten AI...');
                 }}
                 className="px-3 py-1.5 bg-[#2D2A70] hover:bg-[#1E1E3A] text-white rounded-xl text-[11px] font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
               >
@@ -1942,7 +1942,7 @@ export default function PetaSimulasiPage() {
                     onClick={() => {
                       setRelocationSourceStop(selectedStop);
                       setSelectedLocation(null);
-                      showToast(`🔄 Mode Relokasi Aktif: Klik lokasi baru di peta untuk memindahkan Halte ${selectedStop.name}`);
+                      showToast(` Mode Relokasi Aktif: Klik lokasi baru di peta untuk memindahkan Halte ${selectedStop.name}`);
                     }}
                     className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[11px] font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
                     title="Pilih lokasi baru di peta untuk memindahkan halte ini"
@@ -1972,7 +1972,7 @@ export default function PetaSimulasiPage() {
                     name: name,
                   });
                   if (!destinationLocation) setTripPickTarget('destination');
-                  showToast(`📍 Titik Asal (A) diset: ${name}`);
+                  showToast(` Titik Asal (A) diset: ${name}`);
                 }}
                 className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-[#10B981] border border-emerald-200 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
                 title="Jadikan titik awal rute komuter"
@@ -1990,7 +1990,7 @@ export default function PetaSimulasiPage() {
                     name: name,
                   });
                   setTripPickTarget(null);
-                  showToast(`🏁 Titik Tujuan (B) diset: ${name}`);
+                  showToast(` Titik Tujuan (B) diset: ${name}`);
                 }}
                 className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-[#EF4444] border border-red-200 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
                 title="Jadikan titik tujuan rute komuter"
@@ -2030,13 +2030,13 @@ export default function PetaSimulasiPage() {
               setSelectedLocation(null);
               setSimulationResult(null);
               setIsochroneData(null);
-              showToast('📌 Pin konteks dilepaskan');
+              showToast(' Pin konteks dilepaskan');
             }}
             onClearODLocations={() => {
               setOriginLocation(null);
               setDestinationLocation(null);
               setOdTripResult(null);
-              showToast('🔄 Rute perjalanan direset');
+              showToast(' Rute perjalanan direset');
             }}
             onFocusLocation={(loc) => {
               setSelectedLocation({
@@ -2052,7 +2052,7 @@ export default function PetaSimulasiPage() {
               apiClient.getIsochrone(loc.latitude, loc.longitude)
                 .then(iso => setIsochroneData(iso))
                 .catch(() => {});
-              showToast(`🎯 Peta diarahkan ke: ${loc.name || `${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}`}`);
+              showToast(` Peta diarahkan ke: ${loc.name || `${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}`}`);
             }}
             onSimulationTriggered={(sim) => {
               setSimulationResult(sim);
@@ -2070,7 +2070,7 @@ export default function PetaSimulasiPage() {
               apiClient.getIsochrone(sim.latitude, sim.longitude)
                 .then(iso => setIsochroneData(iso))
                 .catch(err => console.warn('Isochrone fetch failed:', err));
-              showToast(`🎯 AI mengarahkan peta ke: ${sim.stop_name || 'Halte Usulan'}`);
+              showToast(` AI mengarahkan peta ke: ${sim.stop_name || 'Halte Usulan'}`);
             }}
             onODTripTriggered={(od) => {
               setSimulationResult(null);
@@ -2079,12 +2079,12 @@ export default function PetaSimulasiPage() {
               if (od.origin) setOriginLocation(od.origin);
               if (od.destination) setDestinationLocation(od.destination);
               focusCameraOnOD(od);
-              showToast(`🎯 Bottleneck perjalanan: ${od.bottleneck.severity}`);
+              showToast(` Bottleneck perjalanan: ${od.bottleneck.severity}`);
             }}
             onToggleLayer={(layerId) => {
               setActiveLayers(prev => ({ ...prev, [layerId]: true }));
               if (!layersData[layerId]) fetchLayerData(layerId);
-              showToast(`🗺️ Layer ${layerId.toUpperCase()} diaktifkan di peta`);
+              showToast(` Layer ${layerId.toUpperCase()} diaktifkan di peta`);
             }}
           />
           <button
