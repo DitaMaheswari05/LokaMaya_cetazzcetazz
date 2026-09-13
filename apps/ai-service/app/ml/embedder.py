@@ -26,6 +26,18 @@ class Embedder:
 
     def encode(self, texts: list[str]) -> np.ndarray:
         """Encode teks menjadi vector embedding float32 (1024-dimensi untuk BGE-M3)."""
+        if settings.remote_ai_url:
+            import httpx
+            try:
+                url = f"{settings.remote_ai_url.rstrip('/')}/embed"
+                with httpx.Client(timeout=30.0) as client:
+                    response = client.post(url, json={"texts": texts})
+                    response.raise_for_status()
+                    data = response.json()
+                    return np.array(data["embeddings"], dtype=np.float32)
+            except Exception as e:
+                logger.error(f"Error calling remote embedder at {settings.remote_ai_url}: {e}")
+
         if self.model is not None:
             try:
                 embeddings = self.model.encode(texts, normalize_embeddings=True)

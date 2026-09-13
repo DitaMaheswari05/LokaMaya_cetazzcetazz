@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     # Server
     host: str = "0.0.0.0"
     port: int = 8001
+    
+    # Proxy Configuration for Vercel
+    remote_ai_url: str | None = None
 
     class Config:
         env_file = ".env"

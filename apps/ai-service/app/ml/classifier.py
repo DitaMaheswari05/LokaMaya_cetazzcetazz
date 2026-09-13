@@ -41,6 +41,17 @@ class Classifier:
 
     def classify(self, text: str, labels: list[str]) -> dict:
         """Klasifikasi teks aspirasi masyarakat terkait transit vs noise."""
+        if settings.remote_ai_url:
+            import httpx
+            try:
+                url = f"{settings.remote_ai_url.rstrip('/')}/classify"
+                with httpx.Client(timeout=30.0) as client:
+                    response = client.post(url, json={"text": text, "labels": labels})
+                    response.raise_for_status()
+                    return response.json()
+            except Exception as e:
+                logger.error(f"Error calling remote classifier at {settings.remote_ai_url}: {e}")
+
         if self.pipe is not None:
             try:
                 result = self.pipe(text, candidate_labels=labels)
