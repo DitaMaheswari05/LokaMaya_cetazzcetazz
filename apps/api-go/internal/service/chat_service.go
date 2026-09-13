@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -452,7 +453,9 @@ Peranmu:
 				Latitude  float64 `json:"latitude"`
 				Longitude float64 `json:"longitude"`
 			}
-			_ = json.Unmarshal([]byte(toolCall.Function.Arguments), &args)
+			if err := json.Unmarshal([]byte(toolCall.Function.Arguments), &args); err != nil {
+				log.Printf("[ChatService] warning: failed to parse query_area_insight args: %v", err)
+			}
 			if args.Latitude == 0 && req.ContextLocation != nil {
 				args.Latitude = req.ContextLocation.Latitude
 				args.Longitude = req.ContextLocation.Longitude
@@ -499,7 +502,9 @@ Peranmu:
 			var args struct {
 				ScoreType string `json:"score_type"`
 			}
-			_ = json.Unmarshal([]byte(toolCall.Function.Arguments), &args)
+			if err := json.Unmarshal([]byte(toolCall.Function.Arguments), &args); err != nil {
+				log.Printf("[ChatService] warning: failed to parse explain_score args: %v", err)
+			}
 			msg := ""
 			switch args.ScoreType {
 			case "ekonomi_umkm":

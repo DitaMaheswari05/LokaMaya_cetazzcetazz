@@ -10,6 +10,10 @@ import {
   OptimalSearchResponse,
   ODLocation,
   ODTripAnalysisResult,
+  GeoJSONFeatureCollection,
+  LoginRequest,
+  RegisterRequest,
+  AuthResponse,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -131,22 +135,52 @@ class ApiClient {
               } else if (currentEvent === 'error') {
                 throw new Error(data.error || 'Terjadi kesalahan server');
               }
-            } catch (err: any) {
+            } catch (err: unknown) {
               if (currentEvent === 'error') throw err;
             }
           }
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (signal?.aborted) {
         return;
       }
+      const errorObj = err instanceof Error ? err : new Error(String(err));
       if (callbacks.onError) {
-        callbacks.onError(err);
+        callbacks.onError(errorObj);
       } else {
-        throw err;
+        throw errorObj;
       }
     }
+  }
+
+  /**
+   * Login user dan dapatkan token autentikasi.
+   */
+  async login(params: LoginRequest): Promise<AuthResponse> {
+    return this.request<AuthResponse>('/api/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  /**
+   * Registrasi user baru.
+   */
+  async register(params: RegisterRequest): Promise<AuthResponse> {
+    return this.request<AuthResponse>('/api/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  /**
+   * Logout user dan bersihkan session.
+   */
+  async logout(): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/api/v1/auth/logout', {
+      method: 'POST',
+    });
   }
 
   /**
@@ -161,8 +195,8 @@ class ApiClient {
   /**
    * Mengambil fitur spasial GeoJSON untuk layer tertentu (halte, rute, rdtr, banjir, umkm, community).
    */
-  async getLayerFeatures(layerId: string): Promise<any> {
-    return this.request<any>(`/api/v1/map/features?layer=${encodeURIComponent(layerId)}`, {
+  async getLayerFeatures(layerId: string): Promise<GeoJSONFeatureCollection> {
+    return this.request<GeoJSONFeatureCollection>(`/api/v1/map/features?layer=${encodeURIComponent(layerId)}`, {
       method: 'GET',
     });
   }
@@ -170,8 +204,8 @@ class ApiClient {
   /**
    * Mengambil poligon jangkauan jalan kaki 5 dan 10 menit (isochrone).
    */
-  async getIsochrone(latitude: number, longitude: number): Promise<any> {
-    return this.request<any>(`/api/v1/routing/isochrone?lat=${latitude}&lng=${longitude}`, {
+  async getIsochrone(latitude: number, longitude: number): Promise<GeoJSONFeatureCollection | Record<string, unknown>> {
+    return this.request<GeoJSONFeatureCollection | Record<string, unknown>>(`/api/v1/routing/isochrone?lat=${latitude}&lng=${longitude}`, {
       method: 'GET',
     });
   }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { EyeOff, Eye, Mail, Lock, User, AlertCircle, Loader2 } from 'lucide-react';
+import { apiClient } from '@/lib/api/client';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -41,34 +42,17 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-      const response = await fetch(`${apiUrl}/api/v1/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // PENTING: Kirim dan terima HttpOnly cookie
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-        }),
+      await apiClient.register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Terjadi kesalahan saat mendaftar');
-      }
-
       // Token sekarang disimpan otomatis di HttpOnly cookie oleh backend.
-      // Kita tidak perlu menyimpannya di localStorage lagi.
-
-      // Redirect ke halaman login atau beranda
+      // Redirect ke halaman login dengan query parameter registered=true
       router.push('/login?registered=true');
-      
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat mendaftar');
     } finally {
       setIsLoading(false);
     }

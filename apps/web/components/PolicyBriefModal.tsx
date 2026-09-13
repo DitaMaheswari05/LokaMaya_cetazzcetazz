@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { FileText, Copy, Check, Printer, X, Download, ShieldCheck } from 'lucide-react';
+import { FileText, Copy, Check, Printer, X, ShieldCheck } from 'lucide-react';
 
 interface PolicyBriefModalProps {
   isOpen: boolean;

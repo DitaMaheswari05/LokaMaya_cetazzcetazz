@@ -11,13 +11,9 @@ import {
   ShieldAlert, 
   Route, 
   AlertTriangle, 
-  CheckCircle2, 
   Compass, 
-  Layers, 
-  Cpu, 
   Sparkles,
-  ArrowRight,
-  Info
+  ArrowRight
 } from 'lucide-react';
 
 export default function MetodologiPage() {

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"strings"
 	"sync"
@@ -192,7 +193,9 @@ func (s *AnalysisService) RunSimulation(ctx context.Context, req *model.Simulate
 	res.PolicyBrief = brief
 
 	// Simpan ke database
-	_ = s.spatialRepo.SaveSimulation(ctx, res, userID)
+	if err := s.spatialRepo.SaveSimulation(ctx, res, userID); err != nil {
+		log.Printf("[AnalysisService] warning: failed to save simulation: %v", err)
+	}
 
 	return res, nil
 }
@@ -205,10 +208,20 @@ func (s *AnalysisService) CompareScenarios(ctx context.Context, req *model.Compa
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				errA = fmt.Errorf("panic in scenario A: %v", r)
+			}
+		}()
 		resA, errA = s.RunSimulation(ctx, &req.ScenarioA, userID)
 	}()
 	go func() {
 		defer wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				errB = fmt.Errorf("panic in scenario B: %v", r)
+			}
+		}()
 		resB, errB = s.RunSimulation(ctx, &req.ScenarioB, userID)
 	}()
 	wg.Wait()

@@ -6,22 +6,23 @@ import { useState, useEffect } from 'react';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [user, setUser] = useState<{name?: string, email?: string} | null>(null);
-  const [locationName, setLocationName] = useState<string>('Meminta lokasi...');
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Failed to parse user data from localStorage");
+  const [user] = useState<{name?: string, email?: string} | null>(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        try {
+          return JSON.parse(storedUser);
+        } catch {
+          // ignore
+        }
       }
     }
-  }, []);
+    return null;
+  });
+  const [locationName, setLocationName] = useState<string>('Meminta lokasi...');
 
   const requestLocation = () => {
-    if (!('geolocation' in navigator)) {
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) {
       setLocationName('Tidak didukung');
       return;
     }
@@ -52,7 +53,32 @@ export default function Navbar() {
   };
 
   useEffect(() => {
-    requestLocation();
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) {
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=id`);
+          const data = await response.json();
+          const city = data.city || data.locality || data.principalSubdivision || 'Lokasi Ditemukan';
+          setLocationName(city);
+        } catch (error) {
+          console.error("Error fetching location:", error);
+          setLocationName('Gagal memuat');
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationName('Lokasi ditolak');
+        } else {
+          setLocationName('Gagal mendapat lokasi');
+        }
+      }
+    );
   }, []);
 
   const getInitials = (name?: string, email?: string) => {

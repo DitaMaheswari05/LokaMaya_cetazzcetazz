@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BehavioralRippleDetail } from '@/types/api';
-import { Activity, Bike, Footprints, Store, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Activity, Bike, Footprints, Store } from 'lucide-react';
 
 interface BehavioralRippleCardProps {
   data: BehavioralRippleDetail;

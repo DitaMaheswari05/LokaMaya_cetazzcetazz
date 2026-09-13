@@ -1,16 +1,17 @@
 "use client";
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import ChatWidget from '@/components/ChatWidget';
 import { apiClient } from '@/lib/api/client';
-import { SimulationResult, OptimalStopCandidate, ODLocation, ODTripAnalysisResult } from '@/types/api';
+import { SimulationResult, OptimalStopCandidate, ODLocation, ODTripAnalysisResult, GeoJSONFeatureCollection, GeoJSONFeature } from '@/types/api';
 import { RouteComparisonCard } from '@/components/RouteComparisonCard';
 import { UrbanCouncilCard } from '@/components/UrbanCouncilCard';
 import { PolicyBriefModal } from '@/components/PolicyBriefModal';
 import { BehavioralRippleCard } from '@/components/BehavioralRippleCard';
-import { Search, Menu, Loader2, MapPin, Sparkles, X, CheckCircle, AlertTriangle, FileText, Compass, Users, Activity, Sparkle, Minus, ChevronUp, Bus, Filter, Layers, ArrowRightLeft, Navigation, Zap, BarChart3, CheckCircle2, Footprints, Clock, ArrowRight, RotateCcw } from 'lucide-react';
+import { SelectedStopDetail } from '@/components/Map';
+import { Search, Menu, Loader2, Sparkles, X, AlertTriangle, FileText, Compass, Users, Activity, Sparkle, Minus, ChevronUp, Bus, Filter, ArrowRightLeft, Navigation, Zap, BarChart3, CheckCircle2, Footprints, Clock, ArrowRight, RotateCcw } from 'lucide-react';
 
 const MapComponent = dynamic(() => import('@/components/Map'), {
   ssr: false,
@@ -28,7 +29,12 @@ const LAYERS = [
 
 export default function PetaSimulasiPage() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return Boolean(localStorage.getItem('user'));
+    }
+    return false;
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInitialPrompt, setChatInitialPrompt] = useState<string | null>(null);
@@ -68,15 +74,15 @@ export default function PetaSimulasiPage() {
   const [isSimulationMinimized, setIsSimulationMinimized] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [layersData, setLayersData] = useState<Record<string, any>>({});
-  const [isochroneData, setIsochroneData] = useState<any | null>(null);
+  const [layersData, setLayersData] = useState<Record<string, GeoJSONFeatureCollection>>({});
+  const [isochroneData, setIsochroneData] = useState<GeoJSONFeatureCollection | Record<string, unknown> | null>(null);
 
   // Filter jenis halte (BRT Utama, Semua Halte, Feeder Non-BRT)
   type StopFilterType = 'brt' | 'all' | 'feeder';
   const [stopFilter, setStopFilter] = useState<StopFilterType>('brt');
   const [filterByRoute, setFilterByRoute] = useState<boolean>(false);
-  const [selectedStop, setSelectedStop] = useState<any | null>(null);
-  const [relocationSourceStop, setRelocationSourceStop] = useState<any | null>(null);
+  const [selectedStop, setSelectedStop] = useState<SelectedStopDetail | null>(null);
+  const [relocationSourceStop, setRelocationSourceStop] = useState<SelectedStopDetail | null>(null);
 
   // Komputasi layer halte terfilter secara reaktif
   const filteredTransjakartaData = useMemo(() => {
@@ -87,25 +93,32 @@ export default function PetaSimulasiPage() {
 
     // 1. Filter tipe halte
     if (stopFilter === 'brt') {
-      features = features.filter((f: any) => f.properties?.is_brt === true || f.properties?.sub_type === 'brt');
+      features = features.filter((f: GeoJSONFeature) => {
+        const p = f.properties as Record<string, unknown>;
+        return p?.is_brt === true || p?.sub_type === 'brt';
+      });
     } else if (stopFilter === 'feeder') {
-      features = features.filter((f: any) => !f.properties?.is_brt);
+      features = features.filter((f: GeoJSONFeature) => {
+        const p = f.properties as Record<string, unknown>;
+        return !p?.is_brt;
+      });
     }
 
     // 2. Filter fokus rute terpilih
     if (filterByRoute && selectedRouteCode) {
-      features = features.filter((f: any) => {
-        let routes = f.properties?.routes;
+      features = features.filter((f: GeoJSONFeature) => {
+        const p = f.properties as Record<string, unknown>;
+        let routes = p?.routes;
         if (typeof routes === 'string') {
           try { routes = JSON.parse(routes); } catch { routes = []; }
         }
         if (!Array.isArray(routes)) routes = [];
 
-        const routeCodes = (f.properties?.route_codes || '').split(',').map((s: string) => s.trim());
+        const routeCodes = (typeof p?.route_codes === 'string' ? p.route_codes : '').split(',').map((s: string) => s.trim());
         return (
-          routes.some((r: any) => r.code === selectedRouteCode || r.corridor === selectedRouteCode) ||
+          (routes as Array<{ code?: string; corridor?: string }>).some((r) => r.code === selectedRouteCode || r.corridor === selectedRouteCode) ||
           routeCodes.includes(selectedRouteCode) ||
-          (f.properties?.corridor && f.properties.corridor.includes(selectedRouteCode))
+          (typeof p?.corridor === 'string' && p.corridor.includes(selectedRouteCode))
         );
       });
     }
@@ -141,22 +154,23 @@ export default function PetaSimulasiPage() {
     const routeMap = new Map<string, { code: string; label: string }>();
 
     for (const f of rawFeatures) {
-      const p = f.properties || {};
-      let code = p.route_code || p.corridor_code;
-      if (!code && p.name) {
-        const m = p.name.match(/Koridor\s+([A-Za-z0-9]+)/i);
+      const p = (f.properties || {}) as Record<string, unknown>;
+      let code = typeof p.route_code === 'string' ? p.route_code : (typeof p.corridor_code === 'string' ? p.corridor_code : '');
+      const nameStr = typeof p.name === 'string' ? p.name : '';
+      if (!code && nameStr) {
+        const m = nameStr.match(/Koridor\s+([A-Za-z0-9]+)/i);
         if (m) code = m[1];
       }
-      if (!code) {
+      if (!code && typeof p.corridor === 'string') {
         code = p.corridor;
       }
       if (!code) continue;
 
       const codeStr = String(code).trim();
       if (!routeMap.has(codeStr)) {
-        let label = p.name || `Koridor ${codeStr}`;
+        let label = nameStr || `Koridor ${codeStr}`;
         if (!label.toLowerCase().startsWith('koridor')) {
-          const cName = p.corridor_name || p.corridor;
+          const cName = typeof p.corridor_name === 'string' ? p.corridor_name : (typeof p.corridor === 'string' ? p.corridor : '');
           label = cName ? `Koridor ${codeStr} (${cName})` : `Koridor ${codeStr}`;
         }
         routeMap.set(codeStr, { code: codeStr, label });
@@ -190,24 +204,46 @@ export default function PetaSimulasiPage() {
   const [optimalCandidates, setOptimalCandidates] = useState<OptimalStopCandidate[]>([]);
   const [isExploringCorridor, setIsExploringCorridor] = useState<boolean>(false);
 
-  const fetchLayerData = async (layerId: string) => {
+  const fetchLayerData = useCallback(async (layerId: string) => {
     try {
       const data = await apiClient.getLayerFeatures(layerId);
       setLayersData(prev => ({ ...prev, [layerId]: data }));
     } catch (err) {
       console.error(`Gagal memuat layer ${layerId}:`, err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const user = localStorage.getItem('user');
     if (!user) {
       router.push('/login');
-    } else {
-      setIsAuthenticated(true);
-      fetchLayerData('transjakarta');
-      fetchLayerData('rute');
+      return;
     }
+
+    let isMounted = true;
+    const loadInitialData = async () => {
+      try {
+        const [tjData, ruteData] = await Promise.all([
+          apiClient.getLayerFeatures('transjakarta'),
+          apiClient.getLayerFeatures('rute'),
+        ]);
+        if (isMounted) {
+          setLayersData(prev => ({
+            ...prev,
+            transjakarta: tjData,
+            rute: ruteData,
+          }));
+        }
+      } catch (err) {
+        console.error("Gagal memuat layer awal:", err);
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [router]);
 
   // Keyboard shortcut listener untuk UX yang lebih cepat (Esc, Ctrl+K, /)
@@ -289,33 +325,36 @@ export default function PetaSimulasiPage() {
     // 1. Cek pencarian nama halte langsung di data layer TransJakarta
     if (layersData?.transjakarta?.features) {
       const q = searchQuery.toLowerCase().trim().replace(/^halte\s+/i, '');
-      const matchStop = layersData.transjakarta.features.find((f: any) => {
-        const name = (f.properties?.name || '').toLowerCase();
+      const matchStop = layersData.transjakarta.features.find((f: GeoJSONFeature) => {
+        const p = f.properties as Record<string, unknown>;
+        const name = (typeof p?.name === 'string' ? p.name : '').toLowerCase();
         return name === q || name.includes(q);
       });
 
       if (matchStop && matchStop.geometry?.coordinates) {
-        if (!matchStop.properties?.is_brt && stopFilter === 'brt') {
+        const p = matchStop.properties as Record<string, unknown>;
+        if (!p?.is_brt && stopFilter === 'brt') {
           setStopFilter('all');
         }
-        const [lng, lat] = matchStop.geometry.coordinates;
+        const coords = (matchStop.geometry as { type: string; coordinates: [number, number] }).coordinates;
+        const [lng, lat] = coords;
         setTargetLocation({ latitude: lat, longitude: lng, zoom: 16.5, pitch: 25 });
         setSelectedLocation({ latitude: lat, longitude: lng });
-        let parsedRoutes = [];
-        if (typeof matchStop.properties?.routes === 'string') {
-          try { parsedRoutes = JSON.parse(matchStop.properties.routes); } catch {}
-        } else if (Array.isArray(matchStop.properties?.routes)) {
-          parsedRoutes = matchStop.properties.routes;
+        let parsedRoutes: Array<{ code: string; name: string; corridor: string }> = [];
+        if (typeof p?.routes === 'string') {
+          try { parsedRoutes = JSON.parse(p.routes); } catch {}
+        } else if (Array.isArray(p?.routes)) {
+          parsedRoutes = p.routes as Array<{ code: string; name: string; corridor: string }>;
         }
         setSelectedStop({
-          name: matchStop.properties?.name || 'Halte TransJakarta',
-          corridor: matchStop.properties?.corridor,
-          route_codes: matchStop.properties?.route_codes,
+          name: typeof p?.name === 'string' ? p.name : 'Halte TransJakarta',
+          corridor: typeof p?.corridor === 'string' ? p.corridor : undefined,
+          route_codes: typeof p?.route_codes === 'string' ? p.route_codes : undefined,
           routes: parsedRoutes,
           lng,
           lat,
-          is_brt: matchStop.properties?.is_brt,
-          sub_type: matchStop.properties?.sub_type,
+          is_brt: p?.is_brt === true || p?.is_brt === 'true',
+          sub_type: typeof p?.sub_type === 'string' ? p.sub_type : undefined,
         });
         setIsSearching(false);
         showToast(`🚏 Halte ditemukan: ${matchStop.properties.name}`);
@@ -429,10 +468,12 @@ export default function PetaSimulasiPage() {
 
       // Client-side guarantee: Pastikan polyline rute selalu mengikuti bentuk jaringan jalan riil
       let enhancedResult = res;
-      if (res.route_geojson?.features) {
+      const routeGeo = res.route_geojson as GeoJSONFeatureCollection | undefined;
+      if (routeGeo?.features) {
         const enrichedFeatures = await Promise.all(
-          res.route_geojson.features.map(async (feat: any) => {
-            const coords = feat.geometry?.coordinates || [];
+          routeGeo.features.map(async (feat: GeoJSONFeature) => {
+            const geom = feat.geometry as { type: string; coordinates: [number, number][] };
+            const coords = geom?.coordinates || [];
             // Jika koordinat sudah rapat (>25 titik), rute OSRM / GTFS sudah optimal
             if (coords.length >= 25) {
               return feat;
@@ -467,7 +508,7 @@ export default function PetaSimulasiPage() {
         enhancedResult = {
           ...res,
           route_geojson: {
-            ...res.route_geojson,
+            ...routeGeo,
             features: enrichedFeatures,
           },
         };
@@ -478,9 +519,10 @@ export default function PetaSimulasiPage() {
       setIsOdTripMinimized(false);
       focusCameraOnOD(enhancedResult);
       showToast(`✅ Analisis tuntas: Bottleneck ${res.bottleneck.severity}!`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("OD analysis error:", err);
-      alert("Gagal menjalankan analisis perjalanan: " + (err.message || 'Terjadi kesalahan'));
+      const errMsg = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      alert("Gagal menjalankan analisis perjalanan: " + errMsg);
     } finally {
       setIsAnalyzingOD(false);
     }
@@ -511,8 +553,9 @@ export default function PetaSimulasiPage() {
         console.warn("Isochrone fetch failed:", isoErr);
       }
       showToast(`✓ Relokasi tuntas: ${result.stop_name || 'Halte Relokasi'}`);
-    } catch (err: any) {
-      alert(`Error simulasi relokasi: ${err.message || 'Gagal menjalankan simulasi'}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Gagal menjalankan simulasi';
+      alert(`Error simulasi relokasi: ${errMsg}`);
     } finally {
       setIsSimulating(false);
     }
@@ -550,8 +593,9 @@ export default function PetaSimulasiPage() {
         console.warn("Isochrone fetch failed:", isoErr);
       }
       showToast(scenario === 'evaluasi' ? `✓ Evaluasi tuntas: ${result.stop_name || 'Halte Eksisting'}` : `✓ Simulasi tuntas: ${result.stop_name || 'Halte Usulan'}`);
-    } catch (err: any) {
-      alert(`Error simulasi: ${err.message || 'Gagal menjalankan simulasi'}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Gagal menjalankan simulasi';
+      alert(`Error simulasi: ${errMsg}`);
     } finally {
       setIsSimulating(false);
     }
@@ -586,8 +630,9 @@ export default function PetaSimulasiPage() {
       } else {
         alert("Tidak ditemukan titik optimal di koridor ini.");
       }
-    } catch (err: any) {
-      alert(`Gagal mengeksplorasi koridor: ${err.message || 'Terjadi kesalahan'}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      alert(`Gagal mengeksplorasi koridor: ${errMsg}`);
     } finally {
       setIsExploringCorridor(false);
     }

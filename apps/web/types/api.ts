@@ -82,7 +82,7 @@ export interface ODTripAnalysisResult {
   delta_walk_distance_meters: number;
   efficiency_gain_percent: number;
   ai_narrative: string;
-  route_geojson?: any;
+  route_geojson?: GeoJSONFeatureCollection | Record<string, unknown>;
 }
 
 export interface ODTripRequest {
@@ -108,7 +108,7 @@ export interface WalkScoreDetail {
   category: 'baik' | 'sedang' | 'perlu_perhatian';
   estimated_reach_5min: number;
   estimated_reach_10min: number;
-  isochrone_geometry?: any;
+  isochrone_geometry?: GeoJSONFeatureCollection | Record<string, unknown>;
 }
 
 export interface UMKMScoreDetail {
@@ -154,8 +154,8 @@ export interface RouteComparisonDetail {
   delta_distance_meters: number;
   delta_travel_time_minutes: number;
   summary: string;
-  as_is_geojson: any;
-  to_be_geojson: any;
+  as_is_geojson: GeoJSONFeatureCollection | Record<string, unknown>;
+  to_be_geojson: GeoJSONFeatureCollection | Record<string, unknown>;
 }
 
 export interface QualitativeContext {
@@ -265,10 +265,10 @@ export interface LayerConfig {
 export interface GeoJSONFeature {
   type: 'Feature';
   id?: string | number;
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   geometry: {
     type: string;
-    coordinates: any;
+    coordinates: unknown;
   };
 }
 
@@ -276,4 +276,31 @@ export interface GeoJSONFeatureCollection {
   type: 'FeatureCollection';
   layer?: string;
   features: GeoJSONFeature[];
+}
+
+export interface User {
+  id: string;
+  email: string;
+  username: string;
+  name?: string;
+  role?: string;
+  created_at?: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  token_type: string;
+  expires_in: number;
+  user: User;
 }

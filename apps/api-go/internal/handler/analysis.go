@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"lokamaya/api-go/internal/middleware"
 	"lokamaya/api-go/internal/model"
 	"lokamaya/api-go/internal/service"
 )
@@ -41,7 +42,7 @@ func (h *AnalysisHandler) Simulate(w http.ResponseWriter, r *http.Request) {
 
 	// Cek apakah ada session user (opsional)
 	var userID *string
-	if user, ok := r.Context().Value("user").(*model.Claims); ok && user != nil {
+	if user := middleware.GetClaims(r.Context()); user != nil {
 		userID = &user.UserID
 	}
 
@@ -68,7 +69,7 @@ func (h *AnalysisHandler) Compare(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var userID *string
-	if user, ok := r.Context().Value("user").(*model.Claims); ok && user != nil {
+	if user := middleware.GetClaims(r.Context()); user != nil {
 		userID = &user.UserID
 	}
 
@@ -184,7 +185,7 @@ func (h *AnalysisHandler) AnalyzeODTrip(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var userID *string
-	if user, ok := r.Context().Value("user").(*model.Claims); ok && user != nil {
+	if user := middleware.GetClaims(r.Context()); user != nil {
 		userID = &user.UserID
 	}
 

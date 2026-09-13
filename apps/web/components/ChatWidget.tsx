@@ -120,22 +120,21 @@ export default function ChatWidget({
   const autoScrollRef = useRef<boolean>(true);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Sync odTripResult jika dipicu dari tombol di luar chat (misal floating planner map)
-  useEffect(() => {
-    if (odTripResult) {
-      setMessages(prev => {
-        if (prev.some(m => m.odTrip === odTripResult)) return prev;
-        return [
-          ...prev,
-          {
-            role: 'assistant',
-            content: odTripResult.ai_narrative,
-            odTrip: odTripResult,
-          },
-        ];
-      });
-    }
-  }, [odTripResult]);
+  const [prevOdTripResult, setPrevOdTripResult] = useState<ODTripAnalysisResult | null>(null);
+  if (odTripResult && odTripResult !== prevOdTripResult) {
+    setPrevOdTripResult(odTripResult);
+    setMessages(prev => {
+      if (prev.some(m => m.odTrip === odTripResult)) return prev;
+      return [
+        ...prev,
+        {
+          role: 'assistant',
+          content: odTripResult.ai_narrative,
+          odTrip: odTripResult,
+        },
+      ];
+    });
+  }
 
   // Deteksi manual scrolling pengguna agar auto-scroll tidak mengganggu bacaan
   const handleScroll = () => {
@@ -267,17 +266,18 @@ export default function ChatWidget({
         },
         controller.signal
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (controller.signal.aborted) {
         return;
       }
+      const errMsg = err instanceof Error ? err.message : 'Silakan ulangi.';
       setMessages(prev => {
         const updated = [...prev];
         const lastIdx = updated.length - 1;
         if (lastIdx >= 0 && updated[lastIdx].role === 'assistant') {
           updated[lastIdx] = {
             ...updated[lastIdx],
-            content: `Maaf, koneksi terputus: ${err.message || 'Silakan ulangi.'}`,
+            content: `Maaf, koneksi terputus: ${errMsg}`,
           };
         }
         return updated;
@@ -303,10 +303,17 @@ export default function ChatWidget({
     }
   };
 
+  const handleSendRef = useRef(handleSend);
+  const onPromptConsumedRef = useRef(onPromptConsumed);
+  useEffect(() => {
+    handleSendRef.current = handleSend;
+    onPromptConsumedRef.current = onPromptConsumed;
+  });
+
   useEffect(() => {
     if (isOpen && initialPrompt && !isLoading) {
-      handleSend(initialPrompt);
-      if (onPromptConsumed) onPromptConsumed();
+      handleSendRef.current(initialPrompt);
+      if (onPromptConsumedRef.current) onPromptConsumedRef.current();
     }
   }, [isOpen, initialPrompt, isLoading]);
 
@@ -669,7 +676,6 @@ export default function ChatWidget({
                               stepsToShow.map((step, sIdx) => {
                                 const isWalk = step.mode === 'walk';
                                 const isBus = step.mode === 'bus';
-                                const isTransfer = step.mode === 'transfer';
 
                                 return (
                                   <div

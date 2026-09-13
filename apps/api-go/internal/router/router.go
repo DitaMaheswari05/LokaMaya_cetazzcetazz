@@ -41,6 +41,7 @@ func New(
 	})
 
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(middleware.OptionalAuth(authSvc))
 
 		// Auth — public routes (tidak butuh JWT) - TETAP DIPERTAHANKAN
 		r.Route("/auth", func(r chi.Router) {

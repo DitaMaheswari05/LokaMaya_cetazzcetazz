@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { DeliberationResult } from '@/types/api';
-import { Users, CheckCircle2, AlertCircle, Sparkles, MessageSquare, ChevronDown, ChevronUp, Scale } from 'lucide-react';
+import { Users, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Scale } from 'lucide-react';
 
 interface UrbanCouncilCardProps {
   deliberation: DeliberationResult;
@@ -131,7 +131,7 @@ export const UrbanCouncilCard: React.FC<UrbanCouncilCardProps> = ({ deliberation
                 </div>
 
                 <p className="text-[10.5px] text-[#1A1832] italic leading-relaxed pl-2 border-l-2 border-[#2D2A70]/20 bg-white/60 p-1.5 rounded-r-lg">
-                  "{sh.quote}"
+                  &ldquo;{sh.quote}&rdquo;
                 </p>
 
                 {sh.key_reason && (

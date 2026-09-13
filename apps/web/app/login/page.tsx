@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, Suspense } from 'react';
 import { EyeOff, Eye, Mail, Lock, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { apiClient } from '@/lib/api/client';
 
 function LoginForm() {
   const router = useRouter();
@@ -36,24 +37,10 @@ function LoginForm() {
     setError('');
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-      const response = await fetch(`${apiUrl}/api/v1/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // PENTING: Kirim dan terima HttpOnly cookie
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
+      const data = await apiClient.login({
+        email: formData.email,
+        password: formData.password,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Email atau password salah');
-      }
 
       // Simpan data user ke localStorage (TAPI BUKAN TOKEN JWT-nya)
       if (data.user) {
@@ -62,9 +49,8 @@ function LoginForm() {
 
       // Redirect ke Peta Simulasi
       router.push('/peta-simulasi');
-      
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Email atau password salah');
     } finally {
       setIsLoading(false);
     }

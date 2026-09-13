@@ -1,11 +1,12 @@
 'use client';
 
 import { ReactNode, useEffect, useState, useRef, useCallback } from 'react';
-import Map, { MapRef, Marker, Source, Layer, NavigationControl, ScaleControl, Popup } from 'react-map-gl/maplibre';
+import Map, { MapRef, Marker, Source, Layer, NavigationControl, ScaleControl, Popup, MapLayerMouseEvent } from 'react-map-gl/maplibre';
+import type { MapGeoJSONFeature } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Compass, Bus, MapPin, Route as RouteIcon, Info, X, Sparkles, ArrowRightLeft, BarChart3 } from 'lucide-react';
+import { Compass, Bus, Route as RouteIcon, X, Sparkles, ArrowRightLeft, BarChart3 } from 'lucide-react';
 
-import { RouteComparisonDetail, RouteStopItem, OptimalStopCandidate, ODTripAnalysisResult, ODLocation } from '@/types/api';
+import { RouteComparisonDetail, RouteStopItem, OptimalStopCandidate, ODTripAnalysisResult, ODLocation, GeoJSONFeatureCollection } from '@/types/api';
 
 export interface SelectedStopDetail {
   name: string;
@@ -28,8 +29,8 @@ interface MapComponentProps {
   destinationLocation?: ODLocation | null;
   odTripResult?: ODTripAnalysisResult | null;
   activeLayers?: Record<string, boolean>;
-  layersData?: Record<string, any>;
-  isochroneData?: any;
+  layersData?: Record<string, GeoJSONFeatureCollection | Record<string, unknown>>;
+  isochroneData?: GeoJSONFeatureCollection | Record<string, unknown> | null;
   routeComparison?: RouteComparisonDetail | null;
   optimalCandidates?: OptimalStopCandidate[];
   onSelectCandidate?: (candidate: OptimalStopCandidate) => void;
@@ -121,11 +122,16 @@ export default function MapComponent({
       });
 
       // Show animated radar ripple at the target location for visual clarity
-      setPulseCoords({ lat: targetLocation.latitude, lng: targetLocation.longitude });
-      const timer = setTimeout(() => {
+      const pulseTimer = setTimeout(() => {
+        setPulseCoords({ lat: targetLocation.latitude, lng: targetLocation.longitude });
+      }, 50);
+      const clearTimer = setTimeout(() => {
         setPulseCoords(null);
-      }, 4500);
-      return () => clearTimeout(timer);
+      }, 4550);
+      return () => {
+        clearTimeout(pulseTimer);
+        clearTimeout(clearTimer);
+      };
     }
   }, [targetLocation, mapLoaded]);
 
@@ -155,12 +161,17 @@ export default function MapComponent({
     );
   }, [odTripResult, originLocation, destinationLocation]);
 
+  const targetLocationRef = useRef(targetLocation);
+  useEffect(() => {
+    targetLocationRef.current = targetLocation;
+  }, [targetLocation]);
+
   // Gentle geolocation centering if no target has been set yet
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          if (!targetLocation && mapRef.current) {
+          if (!targetLocationRef.current && mapRef.current) {
             mapRef.current.flyTo({
               center: [position.coords.longitude, position.coords.latitude],
               zoom: 13.5,
@@ -177,24 +188,25 @@ export default function MapComponent({
   }, []);
 
   // Handler hover pada layer stops-circle (hanya tooltip ringkas jika belum ada halte yang diklik)
-  const handleMouseMove = useCallback((evt: any) => {
+  const handleMouseMove = useCallback((evt: MapLayerMouseEvent) => {
     if (activeSelectedStop) {
       setHoveredStop(null);
       return;
     }
 
-    const feature = evt.features && evt.features.find((f: any) => f.layer.id === 'stops-circle');
+    const feature = evt.features && evt.features.find((f: MapGeoJSONFeature) => f.layer.id === 'stops-circle');
     if (feature) {
-      const props = feature.properties || {};
-      const coords = (feature.geometry as any).coordinates;
+      const props = (feature.properties || {}) as Record<string, unknown>;
+      const geom = feature.geometry as { type: string; coordinates: [number, number] };
+      const coords = geom.coordinates;
       setHoveredStop({
-        name: props.name || 'Halte TransJakarta',
-        corridor: props.corridor,
-        route_codes: props.route_codes,
+        name: typeof props.name === 'string' ? props.name : 'Halte TransJakarta',
+        corridor: typeof props.corridor === 'string' ? props.corridor : undefined,
+        route_codes: typeof props.route_codes === 'string' ? props.route_codes : undefined,
         lng: coords[0],
         lat: coords[1],
         is_brt: props.is_brt === true || props.is_brt === 'true',
-        sub_type: props.sub_type,
+        sub_type: typeof props.sub_type === 'string' ? props.sub_type : undefined,
       });
     } else {
       setHoveredStop(null);
@@ -206,10 +218,10 @@ export default function MapComponent({
   }, []);
 
   // Handler klik pada peta: jika halte diklik, buka detail persisten
-  const handleInternalMapClick = (evt: any) => {
-    const feature = evt.features && evt.features.find((f: any) => f.layer.id === 'stops-circle');
+  const handleInternalMapClick = (evt: MapLayerMouseEvent) => {
+    const feature = evt.features && evt.features.find((f: MapGeoJSONFeature) => f.layer.id === 'stops-circle');
     if (feature) {
-      const props = feature.properties || {};
+      const props = (feature.properties || {}) as Record<string, unknown>;
       let parsedRoutes: Array<{ code: string; name: string; corridor: string }> = [];
       if (typeof props.routes === 'string') {
         try {
@@ -218,19 +230,20 @@ export default function MapComponent({
           parsedRoutes = [];
         }
       } else if (Array.isArray(props.routes)) {
-        parsedRoutes = props.routes;
+        parsedRoutes = props.routes as Array<{ code: string; name: string; corridor: string }>;
       }
 
-      const coords = (feature.geometry as any).coordinates;
+      const geom = feature.geometry as { type: string; coordinates: [number, number] };
+      const coords = geom.coordinates;
       const stopData: SelectedStopDetail = {
-        name: props.name || 'Halte TransJakarta',
-        corridor: props.corridor,
-        route_codes: props.route_codes,
+        name: typeof props.name === 'string' ? props.name : 'Halte TransJakarta',
+        corridor: typeof props.corridor === 'string' ? props.corridor : undefined,
+        route_codes: typeof props.route_codes === 'string' ? props.route_codes : undefined,
         routes: parsedRoutes,
         lng: coords[0],
         lat: coords[1],
         is_brt: props.is_brt === true || props.is_brt === 'true',
-        sub_type: props.sub_type,
+        sub_type: typeof props.sub_type === 'string' ? props.sub_type : undefined,
       };
 
       changeSelectedStop(stopData);
