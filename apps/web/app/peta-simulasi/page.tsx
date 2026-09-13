@@ -1401,32 +1401,101 @@ export default function PetaSimulasiPage() {
 
               {/* Diagnosis Callout */}
               {odTripResult.proposed_stop.action === 'none' ? (
-                <div className="mt-2.5 p-3 rounded-xl bg-emerald-50/80 border border-emerald-300 flex flex-col gap-1">
+                <div className="mt-2.5 p-3 rounded-xl bg-emerald-50/90 border border-emerald-300 flex flex-col gap-1.5 shadow-2xs">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-emerald-900 flex items-center gap-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       <span>Layanan Halte Eksisting Sudah Optimal</span>
                     </span>
-                    <span className="text-[9px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-extrabold uppercase">
+                    <span className="text-[9px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded font-black uppercase tracking-wide">
                       Tidak Butuh Halte Baru
                     </span>
                   </div>
-                  <p className="text-[10.5px] text-emerald-950/85 leading-relaxed mt-0.5">
+
+                  {/* Info strip halte eksisting & walk savings */}
+                  {odTripResult.proposed_stop.nearest_existing_stop_name && (
+                    <div className="flex flex-wrap items-center gap-1.5 text-[9.5px] mt-0.5">
+                      <span className="bg-emerald-100/90 text-emerald-900 px-1.5 py-0.5 rounded font-medium border border-emerald-200/60">
+                        Halte Terdekat: <strong>{odTripResult.proposed_stop.nearest_existing_stop_name}</strong> (~{odTripResult.proposed_stop.distance_to_nearest_stop_meters}m)
+                      </span>
+                      {odTripResult.proposed_stop.walk_savings_meters !== undefined && (
+                        <span className="bg-emerald-100/90 text-emerald-900 px-1.5 py-0.5 rounded font-medium border border-emerald-200/60">
+                          Hemat Jalan Kaki: <strong>~{odTripResult.proposed_stop.walk_savings_meters}m</strong> (Tidak efisien &lt;150m)
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Public interest note */}
+                  {odTripResult.proposed_stop.public_interest_context && (
+                    <div className="mt-0.5 p-2 bg-emerald-100/70 border border-emerald-200/70 rounded-lg text-[9.5px] text-emerald-950 font-medium leading-relaxed flex items-start gap-1.5">
+                      <span className="font-bold shrink-0">⚖️ Pertimbangan Publik:</span>
+                      <span>{odTripResult.proposed_stop.public_interest_context}</span>
+                    </div>
+                  )}
+
+                  {/* Rekomendasi Solusi Berkeadilan */}
+                  {odTripResult.proposed_stop.mitigation_strategy && (
+                    <div className="mt-0.5 flex items-center gap-1">
+                      <span className="text-[9.5px] font-bold px-2 py-0.5 bg-emerald-200/90 text-emerald-900 rounded-md border border-emerald-300/60 flex items-center gap-1">
+                        {odTripResult.proposed_stop.mitigation_strategy === 'feeder_microtrans' ? (
+                          <>
+                            <Bus className="w-3 h-3 text-emerald-700" />
+                            <span>Solusi Berkeadilan: Rute Feeder Mikrotrans / JakLingko Lingkungan</span>
+                          </>
+                        ) : (
+                          <>
+                            <Footprints className="w-3 h-3 text-emerald-700" />
+                            <span>Solusi Berkeadilan: Revitalisasi Trotoar & Akses Pedestrian</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-emerald-950/80 leading-relaxed mt-1">
+                    {odTripResult.proposed_stop.rationale}
+                  </p>
+                </div>
+              ) : odTripResult.proposed_stop.action === 'pindah' ? (
+                <div className="mt-2.5 p-3 rounded-xl bg-indigo-50/90 border border-indigo-200 flex flex-col gap-1.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-indigo-900 flex items-center gap-1.5">
+                      <Shuffle className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Rekomendasi Relokasi: {odTripResult.proposed_stop.stop_name}</span>
+                    </span>
+                    <span className="text-[9px] bg-indigo-600 text-white px-2 py-0.5 rounded font-black uppercase tracking-wide">
+                      Relokasi Halte
+                    </span>
+                  </div>
+                  {odTripResult.proposed_stop.public_interest_context && (
+                    <div className="p-2 bg-indigo-100/70 border border-indigo-200/70 rounded-lg text-[9.5px] text-indigo-950 font-medium leading-relaxed flex items-start gap-1.5">
+                      <span className="font-bold shrink-0">⚖️ Keseimbangan Koridor:</span>
+                      <span>{odTripResult.proposed_stop.public_interest_context}</span>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-indigo-950/80 leading-relaxed mt-0.5">
                     {odTripResult.proposed_stop.rationale}
                   </p>
                 </div>
               ) : (
-                <div className="mt-2.5 p-3 rounded-xl bg-[#ED6B23]/10 border border-[#ED6B23]/30 flex flex-col gap-1">
+                <div className="mt-2.5 p-3 rounded-xl bg-[#ED6B23]/10 border border-[#ED6B23]/30 flex flex-col gap-1.5 shadow-2xs">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-[#ED6B23] flex items-center gap-1.5">
                       <Bus className="w-3.5 h-3.5" />
-                      <span>Rekomendasi Halte Usulan: {odTripResult.proposed_stop.stop_name}</span>
+                      <span>Rekomendasi Halte Baru: {odTripResult.proposed_stop.stop_name}</span>
                     </span>
-                    <span className="text-[9px] bg-[#ED6B23] text-white px-1.5 py-0.5 rounded font-extrabold uppercase">
-                      {odTripResult.proposed_stop.action}
+                    <span className="text-[9px] bg-[#ED6B23] text-white px-2 py-0.5 rounded font-black uppercase tracking-wide">
+                      Tambah Halte Baru
                     </span>
                   </div>
-                  <p className="text-[10.5px] text-[#1A1832]/85 leading-relaxed mt-0.5">
+                  {odTripResult.proposed_stop.public_interest_context && (
+                    <div className="p-2 bg-[#ED6B23]/10 border border-[#ED6B23]/20 rounded-lg text-[9.5px] text-[#1A1832] font-medium leading-relaxed flex items-start gap-1.5">
+                      <span className="font-bold shrink-0">⚖️ Standar Teknis:</span>
+                      <span>{odTripResult.proposed_stop.public_interest_context}</span>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-[#1A1832]/85 leading-relaxed mt-0.5">
                     {odTripResult.proposed_stop.rationale}
                   </p>
                 </div>

@@ -815,39 +815,60 @@ func (s *AnalysisService) AnalyzeODTrip(ctx context.Context, origin, dest model.
 	asIsStepsFormatted := formatJourneyStepsText(result.AsIsJourney.Steps)
 
 	if result.ProposedStop.Action == "none" {
-		prompt = fmt.Sprintf(`Kamu adalah LokaMaya Spatial AI. Berikan analisis perjalanan komuter perkotaan dari Titik A ke Titik B berikut:
+		prompt = fmt.Sprintf(`Kamu adalah LokaMaya Spatial AI, pakar perencana sistem transportasi massal perkotaan (Transit Planning Specialist). Berikan analisis perjalanan komuter perkotaan dari Titik A ke Titik B berikut:
 Asal (Titik A): %s (Lat: %.4f, Lng: %.4f)
 Tujuan (Titik B): %s (Lat: %.4f, Lng: %.4f)
 Halte Terdekat Asal: %s (Jarak: %.0fm, ~%d menit jalan kaki)
 Halte Terdekat Tujuan: %s (Jarak: %.0fm, ~%d menit jalan kaki)
 Keparahan Bottleneck: %s (Skor Friksi: %d/100)
-Status Rekomendasi Halte: TIDAK PERLU HALTE BARU (Layanan halte eksisting sudah optimal, first-mile & last-mile <= 480m)
-Alasan: %s
+Status Rekomendasi Halte: TIDAK PERLU HALTE BARU (Layanan halte eksisting sudah optimal & memprioritaskan kepentingan mayoritas komuter)
+Halte Acuan Terdekat: %s (Jarak ke titik akses koridor: %.0fm)
+Estimasi Penghematan Jalan Kaki jika Tambah Halte: hanya %.0fm (Sangat tidak efisien!)
+Pertimbangan Kepentingan Publik: %s
+Strategi Mitigasi Solusi: %s
+Alasan & Rekomendasi Teknis: %s
 
 Rincian Tahapan Perjalanan Komuter Eksisting (As-Is):
 %s
 Total Durasi Eksisting: ~%d menit (Jalan kaki %.0fm, Beban: %s, Transit: %d kali)
 
 INSTRUKSI PENTING:
-- Kedua titik sudah dekat dengan halte eksisting yang berada dalam jangkauan standar pedestrian perkotaan (<= 480m). TEGASKAN BAHWA TIDAK DIPERLUKAN PEMBANGUNAN HALTE BARU.
-- Tampilkan rincian tahapan perjalanan di atas (Tahap 1 sampai selesai) secara jelas dan terstruktur.
-- Format laporan:
-1. 🚦 **Diagnosis & Tingkat Keparahan Bottleneck**
-2. 🔍 **Rincian Akses Spasial (First-mile & Last-mile)**
-3. 🚏 **Status Intervensi Halte** (Jelaskan halte eksisting sudah optimal dan tidak butuh halte baru)
-4. ⏱️ **Rincian Tahapan Perjalanan Komuter (Eksisting)** (Jelaskan rute langkah demi langkah)
-5. 💡 **Saran Kenyamanan Perjalanan** (Waktu tunggu, jam sibuk, atau tips transfer)`,
+1. EDUKASI PRINSIP KEADILAN & UTILITARIAN TRANSIT PUBLIK:
+   - Jelaskan secara tegas, edukatif, dan rasional mengapa penambahan halte baru di dekat halte eksisting (<350m) atau yang hanya menghemat sedikit jalan kaki (<150m) DITOLAK dalam standar transit perkotaan (ITDP & TransJakarta).
+   - Jelaskan bahwa halte eksisting (%s) sengaja ditempatkan di jalan arteri utama untuk melayani pusat bangkitan mobilitas mayoritas (perkantoran, pusat bisnis CBD, dan integrasi transit koridor).
+   - Menambah halte baru di jalan arteri hanya demi memotong sedikit jalan kaki dari satu pemukiman akan menambah dwell time bus (~1.5–2 menit) dan merugikan ribuan penumpang lain di dalam busway.
+2. USULKAN SOLUSI MITIGASI YANG ADIL & BERKELANJUTAN:
+   - Alih-alih membangun halte busway baru yang redundan, rekomendasikan:
+     a) Penyediaan rute pengumpan Feeder Mikrotrans / JakLingko yang masuk menjemput ke kantong pemukiman warga menuju halte utama.
+     b) Revitalisasi fasilitas trotoar pedestrian (lebar nyaman, kanopi peneduh, pemandu disabilitas, penyeberangan aman/pelican crossing) menuju halte eksisting.
+3. Tampilkan rincian tahapan perjalanan di atas (Tahap 1 sampai selesai) secara jelas dan terstruktur.
+4. Format laporan:
+   1. 🚦 **Diagnosis & Tingkat Keparahan Bottleneck**
+   2. 🔍 **Rincian Hambatan Spasial (First-mile & Last-mile)**
+   3. 🚏 **Status Intervensi Halte & Perspektif Kepentingan Publik Mayoritas** (Tegaskan tidak perlu halte baru dan jelaskan trade-off operasionalnya)
+   4. 🚌 **Solusi Mitigasi Berkeadilan (Feeder Mikrotrans & Jalur Pedestrian)**
+   5. ⏱️ **Rincian Tahapan Perjalanan Komuter Eksisting**
+   6. 💡 **Saran Kenyamanan & Tips Komuter**`,
 			result.Origin.Name, result.Origin.Latitude, result.Origin.Longitude,
 			result.Destination.Name, result.Destination.Latitude, result.Destination.Longitude,
 			result.NearestOriginStop.Name, result.Bottleneck.FirstMileGapMeters, result.NearestOriginStop.WalkMinutes,
 			result.NearestDestinationStop.Name, result.Bottleneck.LastMileGapMeters, result.NearestDestinationStop.WalkMinutes,
 			result.Bottleneck.Severity, result.Bottleneck.FrictionScore,
+			result.ProposedStop.NearestExistingStopName, result.ProposedStop.DistanceToNearestStopMeters,
+			result.ProposedStop.WalkSavingsMeters,
+			result.ProposedStop.PublicInterestContext,
+			result.ProposedStop.MitigationStrategy,
 			result.ProposedStop.Rationale,
 			asIsStepsFormatted,
 			result.AsIsJourney.TotalDurationMinutes, result.AsIsJourney.TotalWalkDistanceMeters, result.AsIsJourney.PedestrianStrainLevel, result.AsIsJourney.TransitRidesCount,
+			result.NearestOriginStop.Name,
 		)
 	} else {
 		toBeStepsFormatted := formatJourneyStepsText(result.ToBeJourney.Steps)
+		actionLabel := "PENAMBAHAN HALTE BARU"
+		if result.ProposedStop.Action == "pindah" {
+			actionLabel = "RELOKASI HALTE EKSISTING"
+		}
 		prompt = fmt.Sprintf(`Kamu adalah LokaMaya Spatial AI. Berikan analisis perjalanan komuter perkotaan dari Titik A ke Titik B berikut:
 Asal (Titik A): %s (Lat: %.4f, Lng: %.4f)
 Tujuan (Titik B): %s (Lat: %.4f, Lng: %.4f)
@@ -855,7 +876,11 @@ Halte Terdekat Asal: %s (Jarak: %.0fm, ~%d menit jalan kaki)
 Halte Terdekat Tujuan: %s (Jarak: %.0fm, ~%d menit jalan kaki)
 Keparahan Bottleneck: %s (Skor Friksi: %d/100)
 Kendala Utama: %s
-Rekomendasi Halte: %s (%s) pada (%.4f, %.4f) di Koridor %s. Rationale: %s
+Aksi Rekomendasi: %s (%s)
+Usulan Halte: %s pada (%.4f, %.4f) di Koridor %s
+Jarak ke Halte Terdekat: %.0fm | Estimasi Penghematan Jalan Kaki: %.0fm
+Konteks Kepentingan Publik: %s
+Dasar Rekomendasi (Rationale): %s
 
 Rincian Tahapan Eksisting (As-Is):
 %s
@@ -864,14 +889,14 @@ Perbandingan Pengalaman Komuter:
 - To-Be: Total Durasi ~%d menit (Jalan kaki %.0fm, Beban: %s, Transit: %d kali)
 - Penghematan: Hemat ~%d menit perjalanan dan memotong jalan kaki sebesar %.0fm (Efisiensi +%d%%).
 
-Rincian Tahapan Setelah Halte Baru (To-Be):
+Rincian Tahapan Setelah Intervensi (To-Be):
 %s
 
 Susun laporan narasi komprehensif, terstruktur, empati pada komuter harian, dengan format:
 1. 🚦 **Diagnosis & Tingkat Keparahan Bottleneck**
 2. 🔍 **Rincian Hambatan Spasial (First-mile, Last-mile, Transit)**
-3. 🚏 **Rekomendasi Intervensi Halte (Wajib di Koridor Jalan Arteri/Kolektor)**
-4. ⏱️ **Rincian Tahapan Perjalanan: As-Is vs To-Be** (Sajikan per tahap 1, 2, 3... Pada setiap tahapan naik bus/BRT, WAJIB sebutkan secara jelas nama rute bus yang dinaiki, halte keberangkatan, dan halte kedatangan/turunnya persis sesuai data rincian tahapan yang diberikan di atas)
+3. 🚏 **Rekomendasi Intervensi Halte (%s)** (Jelaskan mengapa aksi ini tepat dan bagaimana dampaknya bagi kelancaran koridor)
+4. ⏱️ **Rincian Tahapan Perjalanan: As-Is vs To-Be** (Sajikan per tahap 1, 2, 3... Pada setiap tahapan naik bus/BRT, WAJIB sebutkan secara jelas nama rute bus yang dinaiki, halte keberangkatan, dan halte kedatangan/turunnya persis sesuai data di atas)
 5. 💡 **Rekomendasi Kebijakan & Langkah Lanjutan**`,
 			result.Origin.Name, result.Origin.Latitude, result.Origin.Longitude,
 			result.Destination.Name, result.Destination.Latitude, result.Destination.Longitude,
@@ -879,12 +904,17 @@ Susun laporan narasi komprehensif, terstruktur, empati pada komuter harian, deng
 			result.NearestDestinationStop.Name, result.Bottleneck.LastMileGapMeters, result.NearestDestinationStop.WalkMinutes,
 			result.Bottleneck.Severity, result.Bottleneck.FrictionScore,
 			strings.Join(result.Bottleneck.KeyIssues, "; "),
-			result.ProposedStop.StopName, strings.ToUpper(result.ProposedStop.Action), result.ProposedStop.Latitude, result.ProposedStop.Longitude, result.ProposedStop.Corridor, result.ProposedStop.Rationale,
+			actionLabel, strings.ToUpper(result.ProposedStop.Action),
+			result.ProposedStop.StopName, result.ProposedStop.Latitude, result.ProposedStop.Longitude, result.ProposedStop.Corridor,
+			result.ProposedStop.DistanceToNearestStopMeters, result.ProposedStop.WalkSavingsMeters,
+			result.ProposedStop.PublicInterestContext,
+			result.ProposedStop.Rationale,
 			asIsStepsFormatted,
 			result.AsIsJourney.TotalDurationMinutes, result.AsIsJourney.TotalWalkDistanceMeters, result.AsIsJourney.PedestrianStrainLevel, result.AsIsJourney.TransitRidesCount,
 			result.ToBeJourney.TotalDurationMinutes, result.ToBeJourney.TotalWalkDistanceMeters, result.ToBeJourney.PedestrianStrainLevel, result.ToBeJourney.TransitRidesCount,
 			result.DeltaTravelTimeMinutes, result.DeltaWalkDistanceMeters, result.EfficiencyGainPercent,
 			toBeStepsFormatted,
+			actionLabel,
 		)
 	}
 
@@ -906,22 +936,47 @@ Susun laporan narasi komprehensif, terstruktur, empati pada komuter harian, deng
 		}
 
 		if result.ProposedStop.Action == "none" {
-			sb.WriteString("\n#### 🚏 Rekomendasi Halte Usulan:\n")
-			sb.WriteString("- **Status**: ✅ **Layanan Halte Eksisting Sudah Optimal** (Tidak Perlu Halte Baru)\n")
-			sb.WriteString(fmt.Sprintf("- **Keterangan**: %s\n\n", result.ProposedStop.Rationale))
-			sb.WriteString("#### ⏱️ Rincian Tahapan Perjalanan Komuter (Eksisting):\n")
+			sb.WriteString("\n#### 🚏 Evaluasi Kebutuhan Halte & Kepentingan Publik:\n")
+			sb.WriteString("- **Status Rekomendasi**: ✅ **Layanan Halte Eksisting Sudah Optimal** (Tidak Direkomendasikan Halte Baru)\n")
+			if result.ProposedStop.NearestExistingStopName != "" {
+				sb.WriteString(fmt.Sprintf("- **Halte Eksisting Terdekat**: **%s** (Jarak: **~%.0fm**)\n", result.ProposedStop.NearestExistingStopName, result.ProposedStop.DistanceToNearestStopMeters))
+			}
+			if result.ProposedStop.WalkSavingsMeters > 0 {
+				sb.WriteString(fmt.Sprintf("- **Efisiensi Tambah Halte**: Hanya memangkas jalan kaki **%.0fm** (di bawah batas minimum 150m)\n", result.ProposedStop.WalkSavingsMeters))
+			}
+			if result.ProposedStop.PublicInterestContext != "" {
+				sb.WriteString(fmt.Sprintf("- **Prinsip Kepentingan Publik Mayoritas**: %s\n", result.ProposedStop.PublicInterestContext))
+			}
+			sb.WriteString(fmt.Sprintf("- **Penjelasan Lengkap**: %s\n\n", result.ProposedStop.Rationale))
+
+			sb.WriteString("#### 🚌 Solusi Mitigasi yang Adil & Berkelanjutan:\n")
+			if result.ProposedStop.MitigationStrategy == "feeder_microtrans" {
+				sb.WriteString("- **Feeder Mikrotrans / JakLingko**: Menyediakan rute pengumpan lingkungan langsung dari kantong pemukiman menuju halte koridor utama, menjaga kelancaran busway tanpa menambah titik henti.\n")
+				sb.WriteString("- **Pedestrian First**: Perbaikan trotoar dengan kanopi peneduh dan penerangan memadai menuju halte eksisting.\n\n")
+			} else {
+				sb.WriteString("- **Revitalisasi Trotoar Pedestrian**: Peningkatan kenyamanan jalur pejalan kaki terstandarisasi menuju halte eksisting.\n\n")
+			}
+
+			sb.WriteString("#### ⏱️ Rincian Tahapan Perjalanan Komuter Eksisting (As-Is):\n")
 			sb.WriteString(asIsStepsFormatted)
 			sb.WriteString(fmt.Sprintf("\n- **Total Durasi**: **~%d menit** | **Total Jalan Kaki**: **%.0fm** (Beban: *%s*)\n",
 				result.AsIsJourney.TotalDurationMinutes, result.AsIsJourney.TotalWalkDistanceMeters, result.AsIsJourney.PedestrianStrainLevel))
 		} else {
+			actionTitle := "Usulan Halte Baru"
+			if result.ProposedStop.Action == "pindah" {
+				actionTitle = "Relokasi Halte Eksisting"
+			}
 			corridorTag := result.ProposedStop.Corridor
 			if !strings.HasPrefix(strings.ToLower(corridorTag), "koridor ") && !strings.HasPrefix(strings.ToLower(corridorTag), "feeder ") {
 				corridorTag = "Koridor " + corridorTag
 			}
-			sb.WriteString(fmt.Sprintf("\n#### 🚏 Rekomendasi Halte Usulan:\n- **Usulan**: %s (**%s**)\n- **Koordinat**: `%.4f, %.4f` (%s)\n- **Dasar Rekomendasi**: %s\n\n",
-				result.ProposedStop.StopName, strings.ToUpper(result.ProposedStop.Action),
-				result.ProposedStop.Latitude, result.ProposedStop.Longitude,
-				corridorTag, result.ProposedStop.Rationale))
+			sb.WriteString(fmt.Sprintf("\n#### 🚏 Rekomendasi Intervensi Halte (%s):\n- **Usulan**: %s (**%s**)\n- **Koordinat**: `%.4f, %.4f` (%s)\n",
+				actionTitle, result.ProposedStop.StopName, strings.ToUpper(result.ProposedStop.Action),
+				result.ProposedStop.Latitude, result.ProposedStop.Longitude, corridorTag))
+			if result.ProposedStop.PublicInterestContext != "" {
+				sb.WriteString(fmt.Sprintf("- **Kepentingan Publik**: %s\n", result.ProposedStop.PublicInterestContext))
+			}
+			sb.WriteString(fmt.Sprintf("- **Dasar Rekomendasi**: %s\n\n", result.ProposedStop.Rationale))
 			sb.WriteString("#### ⏱️ Rincian Tahapan Perjalanan (As-Is vs To-Be):\n")
 			sb.WriteString("**Kondisi Eksisting (As-Is):**\n")
 			sb.WriteString(asIsStepsFormatted)
@@ -929,7 +984,7 @@ Susun laporan narasi komprehensif, terstruktur, empati pada komuter harian, deng
 				result.AsIsJourney.TotalDurationMinutes, result.AsIsJourney.TotalWalkDistanceMeters, result.AsIsJourney.PedestrianStrainLevel))
 
 			toBeStepsFormatted := formatJourneyStepsText(result.ToBeJourney.Steps)
-			sb.WriteString("**Setelah Halte Baru (To-Be):**\n")
+			sb.WriteString(fmt.Sprintf("**Setelah Intervensi (%s - To-Be):**\n", actionTitle))
 			sb.WriteString(toBeStepsFormatted)
 			sb.WriteString(fmt.Sprintf("- Total waktu **~%d menit** dengan jalan kaki **%.0fm** (Beban: *%s*).\n",
 				result.ToBeJourney.TotalDurationMinutes, result.ToBeJourney.TotalWalkDistanceMeters, result.ToBeJourney.PedestrianStrainLevel))

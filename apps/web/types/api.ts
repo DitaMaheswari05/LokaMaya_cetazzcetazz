@@ -34,10 +34,11 @@ export interface BottleneckDetail {
   flood_risk_detected: boolean;
   summary: string;
   key_issues: string[];
+  public_interest_note?: string;
 }
 
 export interface ProposedStopRecommendation {
-  action: 'tambah' | 'pindah' | string;
+  action: 'tambah' | 'pindah' | 'none' | string;
   stop_name: string;
   latitude: number;
   longitude: number;
@@ -46,6 +47,11 @@ export interface ProposedStopRecommendation {
   distance_to_destination_meters: number;
   rationale: string;
   estimated_reach_population: number;
+  public_interest_context?: string;
+  nearest_existing_stop_name?: string;
+  distance_to_nearest_stop_meters?: number;
+  walk_savings_meters?: number;
+  mitigation_strategy?: 'feeder_microtrans' | 'pedestrian_improvement' | 'relocation' | 'new_stop' | string;
 }
 
 export interface JourneyStep {

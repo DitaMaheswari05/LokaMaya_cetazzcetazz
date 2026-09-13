@@ -31,11 +31,12 @@ type BottleneckDetail struct {
 	FloodRiskDetected   bool     `json:"flood_risk_detected"`   // Jalur melewati area rawan genangan air
 	Summary             string   `json:"summary"`               // Ringkasan diagnosis bottleneck
 	KeyIssues           []string `json:"key_issues"`            // Poin-poin spesifik kendala
+	PublicInterestNote  string   `json:"public_interest_note,omitempty"` // Penjelasan penempatan halte eksisting untuk melayani mayoritas publik
 }
 
-// ProposedStopRecommendation berisi usulan halte baru atau relokasi halte untuk mengatasi bottleneck.
+// ProposedStopRecommendation berisi usulan halte baru, relokasi halte, atau optimalisasi halte eksisting untuk mengatasi bottleneck.
 type ProposedStopRecommendation struct {
-	Action                      string  `json:"action"` // "tambah" | "pindah"
+	Action                      string  `json:"action"` // "tambah" | "pindah" | "none"
 	StopName                    string  `json:"stop_name"`
 	Latitude                    float64 `json:"latitude"`
 	Longitude                   float64 `json:"longitude"`
@@ -44,6 +45,11 @@ type ProposedStopRecommendation struct {
 	DistanceToDestinationMeters float64 `json:"distance_to_destination_meters"`
 	Rationale                   string  `json:"rationale"`
 	EstimatedReachPopulation    int     `json:"estimated_reach_population"`
+	PublicInterestContext       string  `json:"public_interest_context,omitempty"`        // Konteks utilitas mayoritas komuter
+	NearestExistingStopName     string  `json:"nearest_existing_stop_name,omitempty"`      // Nama halte eksisting terdekat
+	DistanceToNearestStopMeters float64 `json:"distance_to_nearest_stop_meters,omitempty"` // Jarak ke halte eksisting terdekat
+	WalkSavingsMeters           float64 `json:"walk_savings_meters,omitempty"`            // Estimasi pemotongan jarak jalan kaki
+	MitigationStrategy          string  `json:"mitigation_strategy,omitempty"`             // "feeder_microtrans" | "pedestrian_improvement" | "relocation" | "new_stop"
 }
 
 // JourneyStep adalah satu segmen langkah perjalanan dalam simulasi komuter.

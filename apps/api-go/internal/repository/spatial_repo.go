@@ -111,10 +111,10 @@ func (r *SpatialRepository) CalculateWalkAccessibility(ctx context.Context, lat,
 	} else if minStopDist > 1100 && minStopDist <= 1600 {
 		transitGapScore = 26
 	} else if minStopDist >= 200 && minStopDist < 350 {
-		transitGapScore = 28
+		transitGapScore = 18
 	} else {
-		// Terlalu dekat (<200m), tumpang tindih dengan halte eksisting
-		transitGapScore = 15
+		// Terlalu dekat (<200m), tumpang tindih parah dengan halte eksisting
+		transitGapScore = 5
 	}
 	// Bonus densitas jaringan koridor (max +8)
 	if stopsIn800m >= 5 {
@@ -264,8 +264,29 @@ func (r *SpatialRepository) CheckFeasibility(ctx context.Context, lat, lng float
 		floodRisk = "Rendah"
 	}
 
+	// 3. Cek Kedekatan dengan Halte Eksisting Terdekat (Standar Inter-Stop Spacing BRT: 350m - 800m)
+	var nearestStopDist float64 = 9999
+	var nearestStopName string
+	if r.db != nil {
+		qStop := `
+			SELECT name, ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography)
+			FROM transjakarta_stops
+			ORDER BY geom <-> ST_SetSRID(ST_MakePoint($1, $2), 4326)
+			LIMIT 1
+		`
+		_ = r.db.QueryRow(ctx, qStop, lng, lat).Scan(&nearestStopName, &nearestStopDist)
+	}
+
 	recommendation := "Lokasi sangat layak untuk penempatan prasarana halte."
-	if suitability == "Bersyarat" {
+	if nearestStopDist < 200 {
+		suitability = "Tidak Sesuai"
+		recommendation = fmt.Sprintf("Peringatan Tumpang Tindih Kritis: Titik ini hanya berjarak %.0fm dari %s. Menambah halte baru di lokasi ini sangat tidak efisien dan melanggar standar jarak minimum antar-halte TransJakarta (350-400m).", nearestStopDist, nearestStopName)
+	} else if nearestStopDist < 350 {
+		if suitability == "Sesuai" {
+			suitability = "Bersyarat"
+		}
+		recommendation = fmt.Sprintf("Peringatan Jarak Antar-Halte: Berjarak hanya %.0fm dari %s. Pertimbangkan opsi relokasi halte eksisting daripada menambah halte baru untuk menjaga kelancaran headway bus koridor.", nearestStopDist, nearestStopName)
+	} else if suitability == "Bersyarat" {
 		recommendation = "Dibutuhkan pelebaran trotoar atau izin pemanfaatan sempadan jalan."
 	} else if suitability == "Tidak Sesuai" {
 		recommendation = "Kawasan lindung atau utilitas tinggi; pertimbangkan geser 100-200m."
@@ -2350,36 +2371,65 @@ func (r *SpatialRepository) ComputeODTrip(ctx context.Context, origin, dest mode
 		friction = 10
 	}
 
-	// 5. Evaluasi Kebutuhan Halte Baru:
-	// Jika kedua titik perjalanan berada dalam batas toleransi wajar (<480m), infrastruktur halte eksisting
-	// sudah memadai dan tidak perlu diusulkan penempatan halte baru.
-	needsNewStop := (firstMile > 480 || lastMile > 480)
-	isProposedAtOrigin := firstMile > 480 && (firstMile >= lastMile || lastMile <= 480)
+	origStopDisplay := formatStopNameWithHalte(origStop.Name)
+	destStopDisplay := formatStopNameWithHalte(destStop.Name)
 
-	// Klasifikasi keparahan bottleneck
+	// 5. Evaluasi Kebutuhan Intervensi Halte & Kepentingan Publik Mayoritas
+	// Standar teknis transit perkotaan (ITDP & BRT TransJakarta):
+	// - Toleransi jalan kaki komuter: 400m - 750m (~5 - 10 menit jalan kaki).
+	// - Standar jarak minimum antar-halte BRT koridor: 350m - 800m.
+	// - Jika titik usulan berjarak < 380m dari halte eksisting, penambahan halte baru DILARANG karena
+	//   menyebabkan over-saturation, menambah dwell time bus (~1.5-2 mnt), dan merugikan ribuan komuter lain di koridor busway.
+	// - Jika penghematan jalan kaki (walk savings) < 150m, penambahan halte baru dikategorikan tidak efisien.
+
+	propLatA, propLngA, roadNameA, corridorNameA := r.snapToArterialCorridor(ctx, origin, origStop, dest)
+	newWalkDistA := haversineDistance(origin.Latitude, origin.Longitude, propLatA, propLngA)
+	distToExistingA := haversineDistance(propLatA, propLngA, origStop.Latitude, origStop.Longitude)
+	walkSavingsA := firstMile - newWalkDistA
+
+	propLatB, propLngB, roadNameB, corridorNameB := r.snapToArterialCorridor(ctx, dest, destStop, origin)
+	newWalkDistB := haversineDistance(dest.Latitude, dest.Longitude, propLatB, propLngB)
+	distToExistingB := haversineDistance(propLatB, propLngB, destStop.Latitude, destStop.Longitude)
+	walkSavingsB := lastMile - newWalkDistB
+
+	// Cek kelayakan intervensi di Sisi Asal (Origin)
+	canAddOrigin := firstMile > 750 && distToExistingA >= 380 && walkSavingsA >= 250
+	canRelocateOrigin := !origStop.IsBRT && firstMile > 500 && distToExistingA >= 180 && distToExistingA <= 500 && walkSavingsA >= 180
+
+	// Cek kelayakan intervensi di Sisi Tujuan (Destination)
+	canAddDest := lastMile > 750 && distToExistingB >= 380 && walkSavingsB >= 250
+	canRelocateDest := !destStop.IsBRT && lastMile > 500 && distToExistingB >= 180 && distToExistingB <= 500 && walkSavingsB >= 180
+
+	// Klasifikasi keparahan bottleneck & catatan kepentingan mayoritas
 	var severity string
 	var summary string
+	var publicNote string
 	var keyIssues []string
 
 	if firstMile > 750 || lastMile > 750 || friction >= 65 {
 		severity = "Kritis"
-		summary = fmt.Sprintf("Ditemukan bottleneck kritis pada koridor %s → %s. Akses pejalan kaki sangat terbebani dan komuter mengalami friksi transfer transit yang berat.", origName, destName)
+		summary = fmt.Sprintf("Ditemukan bottleneck kritis pada koridor %s → %s. Akses pejalan kaki melebihi 750m atau komuter mengalami friksi transfer transit yang berat.", origName, destName)
 	} else if firstMile > 480 || lastMile > 480 || !hasCommonRoute || friction >= 40 {
 		severity = "Sedang"
-		summary = fmt.Sprintf("Ditemukan bottleneck sedang pada perjalanan %s → %s. Jarak jalan kaki melebihi standar kenyamanan atau membutuhkan transit antar-koridor.", origName, destName)
+		summary = fmt.Sprintf("Ditemukan bottleneck sedang pada perjalanan %s → %s. Akses first-mile/last-mile melewati 480m atau membutuhkan transit antar-koridor.", origName, destName)
 	} else {
 		severity = "Ringan"
 		summary = fmt.Sprintf("Koridor perjalanan %s → %s sudah optimal dan tidak memberatkan komuter.", origName, destName)
 	}
 
 	if firstMile > 480 {
-		keyIssues = append(keyIssues, fmt.Sprintf("First-Mile Gap: Jarak berjalan kaki ke %s mencapai %.0fm (~%d menit jalan kaki).", origStop.Name, firstMile, origStop.WalkMinutes))
+		if distToExistingA < 380 && firstMile <= 800 {
+			keyIssues = append(keyIssues, fmt.Sprintf("First-Mile Terkendala Penetrasi Lingkungan: Jarak jalan kaki %.0fm (~%d menit) terjadi karena titik asal berada di dalam pemukiman/gang, sedangkan %s diposisikan di koridor arteri untuk melayani mayoritas komuter kawasan perkantoran/komersial.", firstMile, origStop.WalkMinutes, origStopDisplay))
+			publicNote = fmt.Sprintf("Posisi %s dipertahankan pada koridor arteri untuk melayani mayoritas komuter. Penambahan halte baru di jalan arteri hanya demi 1 titik pemukiman tidak efisien dan akan menambah dwell time bus bagi ribuan penumpang lain.", origStopDisplay)
+		} else {
+			keyIssues = append(keyIssues, fmt.Sprintf("First-Mile Gap: Jarak berjalan kaki ke %s mencapai %.0fm (~%d menit jalan kaki).", origStopDisplay, firstMile, origStop.WalkMinutes))
+		}
 	}
 	if lastMile > 480 {
-		keyIssues = append(keyIssues, fmt.Sprintf("Last-Mile Gap: Titik akhir berjarak %.0fm (~%d menit) dari %s.", lastMile, destStop.WalkMinutes, destStop.Name))
+		keyIssues = append(keyIssues, fmt.Sprintf("Last-Mile Gap: Titik akhir berjarak %.0fm (~%d menit) dari %s.", lastMile, destStop.WalkMinutes, destStopDisplay))
 	}
 	if !hasCommonRoute {
-		keyIssues = append(keyIssues, fmt.Sprintf("Diskontinuitas Koridor: Belum ada rute langsung antara %s dan %s (wajib transfer 1 kali).", origStop.Name, destStop.Name))
+		keyIssues = append(keyIssues, fmt.Sprintf("Diskontinuitas Koridor: Belum ada rute langsung antara %s dan %s (wajib transfer 1 kali).", origStopDisplay, destStopDisplay))
 	}
 	if floodDetected {
 		keyIssues = append(keyIssues, "Kerentanan Lingkungan: Jalur pejalan kaki melintasi area rawan genangan air saat hujan deras.")
@@ -2390,108 +2440,163 @@ func (r *SpatialRepository) ComputeODTrip(ctx context.Context, origin, dest mode
 
 	// ─── Rekomendasi Halte Usulan ───
 	var proposedStop model.ProposedStopRecommendation
+	var isProposedAtOrigin bool
 
-	if !needsNewStop {
+	if canAddOrigin || canAddDest || canRelocateOrigin || canRelocateDest {
+		if (canAddOrigin || canRelocateOrigin) && ((canAddOrigin && !canAddDest) || walkSavingsA >= walkSavingsB || lastMile <= 480) {
+			// Rekomendasi di Sisi Asal (Origin)
+			isProposedAtOrigin = true
+			if canRelocateOrigin {
+				proposedStop = model.ProposedStopRecommendation{
+					Action:                      "pindah",
+					StopName:                    fmt.Sprintf("Relokasi %s ke %s", origStopDisplay, roadNameA),
+					Latitude:                    propLatA,
+					Longitude:                   propLngA,
+					Corridor:                    corridorNameA,
+					DistanceToOriginMeters:      math.Round(newWalkDistA),
+					DistanceToDestinationMeters: math.Round(haversineDistance(propLatA, propLngA, dest.Latitude, dest.Longitude)),
+					Rationale:                   fmt.Sprintf("Direkomendasikan MERELOKASI (memindahkan) halte eksisting %s sejauh %.0fm ke arah %s. Relokasi ini mendekatkan simpul transit ke kantong pemukiman padat warga (memangkas jalan kaki dari %.0fm menjadi %.0fm) tanpa menambah jumlah titik pemberhentian armada BRT, sehingga headway bus koridor %s tetap terjaga lancar bagi seluruh penumpang.",
+						origStopDisplay, distToExistingA, roadNameA, firstMile, newWalkDistA, corridorNameA),
+					PublicInterestContext:       fmt.Sprintf("Relokasi halte menjaga jumlah titik henti koridor %s tetap seimbang sehingga tidak memicu dwell time berlebih bagi ribuan penumpang lain.", corridorNameA),
+					NearestExistingStopName:     origStop.Name,
+					DistanceToNearestStopMeters: math.Round(distToExistingA),
+					WalkSavingsMeters:           math.Round(walkSavingsA),
+					MitigationStrategy:          "relocation",
+					EstimatedReachPopulation:    3100,
+				}
+			} else {
+				// Tambah halte baru di sisi asal
+				newWalkMinA := int(math.Ceil(newWalkDistA / 75.0))
+				if newWalkMinA < 1 {
+					newWalkMinA = 2
+				}
+				stopTitle := fmt.Sprintf("Halte Usulan Akses %s (%s)", roadNameA, origName)
+				_, propCorridor := r.resolveStopRoutesAndCorridor(ctx, propLatA, propLngA, stopTitle, corridorNameA, true)
+				if propCorridor != "" {
+					corridorNameA = propCorridor
+				}
+				proposedStop = model.ProposedStopRecommendation{
+					Action:                      "tambah",
+					StopName:                    stopTitle,
+					Latitude:                    propLatA,
+					Longitude:                   propLngA,
+					Corridor:                    corridorNameA,
+					DistanceToOriginMeters:      math.Round(newWalkDistA),
+					DistanceToDestinationMeters: math.Round(haversineDistance(propLatA, propLngA, dest.Latitude, dest.Longitude)),
+					Rationale:                   fmt.Sprintf("Ditempatkan pada koridor jalan arteri/kolektor utama %s di titik akses terdekat dengan kawasan pemukiman %s. Menutup blank spot first-mile yang berjarak %.0fm dari halte eksisting terdekat (%s), memenuhi standar jarak minimum antar-halte (>350m), dan memangkas jarak jalan kaki komuter dari %.0fm menjadi %.0fm (~%d menit).",
+						roadNameA, origName, distToExistingA, origStopDisplay, firstMile, newWalkDistA, newWalkMinA),
+					PublicInterestContext:       fmt.Sprintf("Titik usulan berjarak aman (%.0fm) dari halte eksisting terdekat sehingga tidak memicu tumpang tindih operasional dan melayani kawasan permukiman yang sebelumnya terisolir dari jaringan transit.", distToExistingA),
+					NearestExistingStopName:     origStop.Name,
+					DistanceToNearestStopMeters: math.Round(distToExistingA),
+					WalkSavingsMeters:           math.Round(walkSavingsA),
+					MitigationStrategy:          "new_stop",
+					EstimatedReachPopulation:    2850,
+				}
+			}
+		} else {
+			// Rekomendasi di Sisi Tujuan (Destination)
+			isProposedAtOrigin = false
+			if canRelocateDest {
+				proposedStop = model.ProposedStopRecommendation{
+					Action:                      "pindah",
+					StopName:                    fmt.Sprintf("Relokasi %s ke %s", destStopDisplay, roadNameB),
+					Latitude:                    propLatB,
+					Longitude:                   propLngB,
+					Corridor:                    corridorNameB,
+					DistanceToOriginMeters:      math.Round(haversineDistance(origin.Latitude, origin.Longitude, propLatB, propLngB)),
+					DistanceToDestinationMeters: math.Round(newWalkDistB),
+					Rationale:                   fmt.Sprintf("Direkomendasikan MERELOKASI (memindahkan) halte eksisting %s sejauh %.0fm ke arah %s untuk mengoptimalkan jangkauan last-mile pemukiman (memangkas jalan kaki dari %.0fm menjadi %.0fm) tanpa menambah titik henti bus koridor %s.",
+						destStopDisplay, distToExistingB, roadNameB, lastMile, newWalkDistB, corridorNameB),
+					PublicInterestContext:       fmt.Sprintf("Relokasi mempertahankan keseimbangan jarak antar-halte koridor %s demi menjaga kecepatan tempuh armada bagi mayoritas penumpang.", corridorNameB),
+					NearestExistingStopName:     destStop.Name,
+					DistanceToNearestStopMeters: math.Round(distToExistingB),
+					WalkSavingsMeters:           math.Round(walkSavingsB),
+					MitigationStrategy:          "relocation",
+					EstimatedReachPopulation:    2900,
+				}
+			} else {
+				newWalkMinB := int(math.Ceil(newWalkDistB / 75.0))
+				if newWalkMinB < 1 {
+					newWalkMinB = 2
+				}
+				stopTitle := fmt.Sprintf("Halte Usulan Akses %s (%s)", roadNameB, destName)
+				_, propCorridor := r.resolveStopRoutesAndCorridor(ctx, propLatB, propLngB, stopTitle, corridorNameB, true)
+				if propCorridor != "" {
+					corridorNameB = propCorridor
+				}
+				proposedStop = model.ProposedStopRecommendation{
+					Action:                      "tambah",
+					StopName:                    stopTitle,
+					Latitude:                    propLatB,
+					Longitude:                   propLngB,
+					Corridor:                    corridorNameB,
+					DistanceToOriginMeters:      math.Round(haversineDistance(origin.Latitude, origin.Longitude, propLatB, propLngB)),
+					DistanceToDestinationMeters: math.Round(newWalkDistB),
+					Rationale:                   fmt.Sprintf("Ditempatkan pada koridor jalan arteri/kolektor utama %s di titik akses terdekat dengan kawasan tujuan %s. Menutup blank spot last-mile berjarak %.0fm dari halte terdekat (%s), memenuhi standar hierarki jalan TransJakarta (>350m), dan memangkas jalan kaki dari %.0fm menjadi %.0fm (~%d menit).",
+						roadNameB, destName, distToExistingB, destStopDisplay, lastMile, newWalkDistB, newWalkMinB),
+					PublicInterestContext:       fmt.Sprintf("Titik usulan berjarak %.0fm dari halte eksisting terdekat sehingga tidak mengganggu kelancaran headway bus koridor %s.", distToExistingB, corridorNameB),
+					NearestExistingStopName:     destStop.Name,
+					DistanceToNearestStopMeters: math.Round(distToExistingB),
+					WalkSavingsMeters:           math.Round(walkSavingsB),
+					MitigationStrategy:          "new_stop",
+					EstimatedReachPopulation:    3200,
+				}
+			}
+		}
+	} else {
+		// Kasus Action = "none": Halte eksisting dipertahankan demi efisiensi operasional & kepentingan mayoritas
+		isProposedAtOrigin = false
+		var rationale, publicContext, mitigationStrategy string
+		var refStopName string
+		var distToRefStop, savings float64
+
+		if firstMile > 480 && (distToExistingA < 380 || walkSavingsA < 150 || firstMile <= 800) {
+			refStopName = origStopDisplay
+			distToRefStop = distToExistingA
+			savings = math.Max(0, math.Round(walkSavingsA))
+			mitigationStrategy = "feeder_microtrans"
+			rationale = fmt.Sprintf("Akses jalan kaki komuter ke %s sejauh %.0fm (~%d menit) berada dalam batas toleransi pejalan kaki wajar (<800m). Halte eksisting berjarak hanya %.0fm dari titik akses koridor utama %s dan ditempatkan secara strategis untuk melayani pusat bangkitan mayoritas (kawasan perkantoran, pusat bisnis CBD, dan integrasi koridor transit). Penambahan halte baru di lokasi ini HANYA memotong jarak jalan kaki sebesar %.0fm, namun akan menimbulkan dampak inefisiensi operasional berat: menambah dwell time bus (~1.5–2 menit) dan memperlambat ribuan penumpang lain di dalam armada bus. Rekomendasi yang tepat dan berkeadilan adalah penyediaan rute Feeder Mikrotrans/JakLingko ke kantong pemukiman dan perbaikan fasilitas trotoar pedestrian menuju %s.",
+				origStopDisplay, firstMile, origStop.WalkMinutes, distToExistingA, origStop.Corridor, savings, origStopDisplay)
+			publicContext = fmt.Sprintf("%s melayani simpul bangkitan mayoritas komuter koridor %s. Penambahan halte baru berjarak <350m di jalan arteri dilarang demi menjaga headway bus BRT mayoritas warga.", origStopDisplay, origStop.Corridor)
+		} else if lastMile > 480 && (distToExistingB < 380 || walkSavingsB < 150 || lastMile <= 800) {
+			refStopName = destStopDisplay
+			distToRefStop = distToExistingB
+			savings = math.Max(0, math.Round(walkSavingsB))
+			mitigationStrategy = "feeder_microtrans"
+			rationale = fmt.Sprintf("Akses jalan kaki di titik tujuan menuju %s sejauh %.0fm (~%d menit) berada dalam batas toleransi wajar (<800m). Halte eksisting berjarak hanya %.0fm dari titik akses koridor %s dan melayani simpul bangkitan mayoritas komuter. Penambahan halte baru hanya menghemat %.0fm jalan kaki dan tidak direkomendasikan karena akan memicu inefisiensi operasional koridor bus. Solusi yang tepat adalah penyediaan feeder Mikrotrans JakLingko menuju %s.",
+				destStopDisplay, lastMile, destStop.WalkMinutes, distToExistingB, destStop.Corridor, savings, destStopDisplay)
+			publicContext = fmt.Sprintf("%s melayani simpul mobilitas mayoritas komuter koridor %s.", destStopDisplay, destStop.Corridor)
+		} else {
+			refStopName = origStopDisplay
+			distToRefStop = distToExistingA
+			savings = 0
+			mitigationStrategy = "pedestrian_improvement"
+			rationale = fmt.Sprintf("Akses pejalan kaki di titik awal (%s: %.0fm) dan titik tujuan (%s: %.0fm) sudah berada dalam batas ideal standar pelayanan TransJakarta (<500m). Perjalanan tidak memberatkan komuter sehingga tidak direkomendasikan penambahan atau pemindahan halte baru untuk menjaga kelancaran headway armada bus.",
+				origStopDisplay, firstMile, destStopDisplay, lastMile)
+			publicContext = "Koridor perjalanan telah terlayani dengan optimal oleh halte eksisting."
+		}
+
 		proposedStop = model.ProposedStopRecommendation{
 			Action:                      "none",
-			StopName:                    "Layanan Halte Sudah Optimal",
+			StopName:                    fmt.Sprintf("Layanan %s Sudah Optimal", refStopName),
 			Latitude:                    origin.Latitude,
 			Longitude:                   origin.Longitude,
 			Corridor:                    origStop.Corridor,
 			DistanceToOriginMeters:      firstMile,
 			DistanceToDestinationMeters: lastMile,
-			Rationale: fmt.Sprintf("Akses pejalan kaki di titik awal (%s: %.0fm) dan titik tujuan (%s: %.0fm) sudah berada dalam batas toleransi standar pelayanan TransJakarta (<500m). Perjalanan tidak memberatkan komuter sehingga tidak direkomendasikan penambahan atau pemindahan halte baru untuk menjaga kelancaran headway bus.",
-				origStop.Name, firstMile, destStop.Name, lastMile),
-			EstimatedReachPopulation: 0,
-		}
-	} else if isProposedAtOrigin {
-		// Usulan penambahan / pemindahan di sisi asal (first-mile)
-		action := "tambah"
-		if firstMile < 600 && !origStop.IsBRT {
-			action = "pindah"
-		}
-		propLat, propLng, roadName, corridorName := r.snapToArterialCorridor(ctx, origin, origStop, dest)
-		newWalkDist := haversineDistance(origin.Latitude, origin.Longitude, propLat, propLng)
-		if newWalkDist < 80 {
-			newWalkDist = 90
-		}
-		if newWalkDist >= firstMile {
-			ratio := 0.80
-			propLat = origin.Latitude + (propLat-origin.Latitude)*ratio
-			propLng = origin.Longitude + (propLng-origin.Longitude)*ratio
-			newWalkDist = haversineDistance(origin.Latitude, origin.Longitude, propLat, propLng)
-		}
-		newWalkMin := int(math.Ceil(newWalkDist / 75.0))
-		if newWalkMin < 1 {
-			newWalkMin = 2
-		}
-
-		stopTitle := fmt.Sprintf("Halte Usulan Akses %s (%s)", roadName, origName)
-		_, propCorridor := r.resolveStopRoutesAndCorridor(ctx, propLat, propLng, stopTitle, corridorName, true)
-		if propCorridor != "" {
-			corridorName = propCorridor
-		}
-		rationale := fmt.Sprintf("Ditempatkan pada koridor jalan arteri/kolektor utama %s di titik akses terdekat dengan kawasan pemukiman %s. Lokasi ini memenuhi standar hierarki jalan perkotaan TransJakarta (lebar jalan >10m, bebas hambatan gang sempit) dan memangkas jarak jalan kaki komuter dari %.0fm (~%d menit) menjadi %.0fm (~%d menit).",
-			roadName, origName, firstMile, origStop.WalkMinutes, newWalkDist, newWalkMin)
-
-		proposedStop = model.ProposedStopRecommendation{
-			Action:                      action,
-			StopName:                    stopTitle,
-			Latitude:                    propLat,
-			Longitude:                   propLng,
-			Corridor:                    corridorName,
-			DistanceToOriginMeters:      math.Round(newWalkDist),
-			DistanceToDestinationMeters: math.Round(haversineDistance(propLat, propLng, dest.Latitude, dest.Longitude)),
 			Rationale:                   rationale,
-			EstimatedReachPopulation:    2850,
-		}
-	} else {
-		// Usulan di sisi tujuan (last-mile)
-		action := "tambah"
-		propLat, propLng, roadName, corridorName := r.snapToArterialCorridor(ctx, dest, destStop, origin)
-		newWalkDist := haversineDistance(dest.Latitude, dest.Longitude, propLat, propLng)
-		if newWalkDist < 80 {
-			newWalkDist = 90
-		}
-		if newWalkDist >= lastMile {
-			ratio := 0.80
-			propLat = dest.Latitude + (propLat-dest.Latitude)*ratio
-			propLng = dest.Longitude + (propLng-dest.Longitude)*ratio
-			newWalkDist = haversineDistance(dest.Latitude, dest.Longitude, propLat, propLng)
-		}
-		newWalkMin := int(math.Ceil(newWalkDist / 75.0))
-		if newWalkMin < 1 {
-			newWalkMin = 2
-		}
-
-		stopTitle := fmt.Sprintf("Halte Usulan Akses %s (%s)", roadName, destName)
-		_, propCorridor := r.resolveStopRoutesAndCorridor(ctx, propLat, propLng, stopTitle, corridorName, true)
-		if propCorridor != "" {
-			corridorName = propCorridor
-		}
-		rationale := fmt.Sprintf("Ditempatkan pada koridor jalan arteri/kolektor utama %s di titik akses terdekat dengan kawasan tujuan %s. Menutup blank spot last-mile sesuai standar hierarki jalan perkotaan TransJakarta, memangkas jarak jalan kaki komuter dari %.0fm (~%d menit) menjadi %.0fm (~%d menit).",
-			roadName, destName, lastMile, destStop.WalkMinutes, newWalkDist, newWalkMin)
-
-		proposedStop = model.ProposedStopRecommendation{
-			Action:                      action,
-			StopName:                    stopTitle,
-			Latitude:                    propLat,
-			Longitude:                   propLng,
-			Corridor:                    corridorName,
-			DistanceToOriginMeters:      math.Round(haversineDistance(origin.Latitude, origin.Longitude, propLat, propLng)),
-			DistanceToDestinationMeters: math.Round(newWalkDist),
-			Rationale:                   rationale,
-			EstimatedReachPopulation:    3200,
+			PublicInterestContext:       publicContext,
+			NearestExistingStopName:     refStopName,
+			DistanceToNearestStopMeters: math.Round(distToRefStop),
+			WalkSavingsMeters:           savings,
+			MitigationStrategy:          mitigationStrategy,
+			EstimatedReachPopulation:    0,
 		}
 	}
 
-	// 6. Rancang Simulasi Pengalaman Komuter: As-Is vs To-Be
-	// ─── As-Is Steps (Breakdown Lengkap Tiap Tahap) ───
-	asIsTransitMinutes := int(math.Max(8, math.Round(directDist/300.0)))
-	var asIsSteps []model.JourneyStep
-
-	origStopDisplay := formatStopNameWithHalte(origStop.Name)
-	destStopDisplay := formatStopNameWithHalte(destStop.Name)
+	if publicNote == "" && proposedStop.PublicInterestContext != "" {
+		publicNote = proposedStop.PublicInterestContext
+	}
 
 	routeA := cleanRouteDisplay(origStop.Corridor)
 	if len(origStop.Routes) > 0 {
@@ -2625,6 +2730,7 @@ func (r *SpatialRepository) ComputeODTrip(ctx context.Context, origin, dest mode
 	}
 
 	// ─── To-Be Steps (Dengan Halte Usulan Baru / Relokasi) ───
+	needsNewStop := proposedStop.Action == "tambah" || proposedStop.Action == "pindah"
 	var toBeSteps []model.JourneyStep
 	var toBeJourney model.JourneySimulation
 	var deltaTravelTime int
@@ -2956,6 +3062,7 @@ func (r *SpatialRepository) ComputeODTrip(ctx context.Context, origin, dest mode
 			FloodRiskDetected:  floodDetected,
 			Summary:            summary,
 			KeyIssues:          keyIssues,
+			PublicInterestNote: publicNote,
 		},
 		ProposedStop:            proposedStop,
 		AsIsJourney:             asIsJourney,
