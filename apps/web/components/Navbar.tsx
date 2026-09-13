@@ -1,13 +1,30 @@
 "use client";
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { apiClient } from '../lib/api/client';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [user, setUser] = useState<{name?: string, email?: string} | null>(null);
+  const router = useRouter();
+  const [user, setUser] = useState<{ name?: string, email?: string } | null>(null);
   const [locationName, setLocationName] = useState<string>('Meminta lokasi...');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await apiClient.logout();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      setUser(null);
+      setIsDropdownOpen(false);
+      router.push('/login');
+    }
+  };
 
   const requestLocation = () => {
     if (typeof window === 'undefined' || !('geolocation' in navigator)) {
@@ -97,11 +114,11 @@ export default function Navbar() {
       <div className="flex items-center gap-8 h-full">
         <Link href="/" className="flex items-center gap-2">
           <div className="w-[34px] h-[34px] bg-[#2D2A70] rounded-[10px] flex items-center justify-center p-1">
-            <Image 
-              src="/lokamaya_logo.png" 
-              alt="LokaMaya Logo" 
-              width={24} 
-              height={24} 
+            <Image
+              src="/lokamaya_logo.png"
+              alt="LokaMaya Logo"
+              width={24}
+              height={24}
               className="object-contain"
               style={{ width: 'auto', height: 'auto' }}
             />
@@ -126,7 +143,7 @@ export default function Navbar() {
       </div>
 
       <div className="flex items-center gap-3">
-        <button 
+        <button
           onClick={requestLocation}
           className="hidden md:flex bg-[#F0F0F6] rounded-lg px-3.5 py-1.5 hover:bg-[#E2E2EF] transition-colors cursor-pointer"
           title="Perbarui Lokasi"
@@ -139,11 +156,34 @@ export default function Navbar() {
             {locationName}
           </span>
         </button>
-        <div 
-          className="w-[34px] h-[34px] bg-[#2D2A70] rounded-full flex items-center justify-center text-white text-[12px] font-bold"
-          title={user?.name || user?.email || 'User Profile'}
-        >
-          {getInitials(user?.name, user?.email)}
+        <div className="relative">
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="w-[34px] h-[34px] bg-[#2D2A70] rounded-full flex items-center justify-center text-white text-[12px] font-bold cursor-pointer hover:bg-[#3d3a8a] transition-colors focus:outline-none"
+            title={user?.name || user?.email || 'User Profile'}
+          >
+            {getInitials(user?.name, user?.email)}
+          </button>
+          
+          {isDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-[0px_4px_12px_rgba(45,42,112,0.1)] border border-[#E2E2EF] py-1 z-50">
+              <div className="px-4 py-2 border-b border-[#E2E2EF]">
+                <p className="text-[13px] font-semibold text-[#1A1832] truncate">{user?.name || 'User'}</p>
+                <p className="text-[11px] text-[#6B6B8F] truncate">{user?.email}</p>
+              </div>
+              <button 
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2 text-[13px] font-medium text-[#D14343] hover:bg-[#FFF5F5] transition-colors flex items-center gap-2"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Keluar
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </nav>
