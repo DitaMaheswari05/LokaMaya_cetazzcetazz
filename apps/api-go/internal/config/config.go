@@ -39,7 +39,7 @@ func Load() *Config {
 	}
 
 	return &Config{
-		Port:           getEnv("GO_API_PORT", "8080"),
+		Port:           getEnv("PORT", getEnv("GO_API_PORT", "8080")),
 		DatabaseURL:    getEnv("DATABASE_URL", ""),
 		RedisURL:       getEnv("REDIS_URL", ""),
 		OSRMURL:        getEnv("OSRM_URL", "https://router.project-osrm.org"),
